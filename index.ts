@@ -7,7 +7,7 @@ function getId() {
   return idCounter;
 }
 
-function UIForm(targetId: string | any, meta: any): any {
+function RenderForm(targetId: string | any, meta: any): any {
   let target: HTMLElement;
   if (typeof targetId === 'string') {
     target = document.getElementById(targetId);
@@ -19,76 +19,70 @@ function UIForm(targetId: string | any, meta: any): any {
     target = targetId;
   }
 
-  return {
-    render: () => {
-      const eventHandlers: any = {};
-      let renderedChildren: any[] = [];
-      const {
-        type,
-        text,
-        style,
-        classes,
-        attributes,
-        events,
-        id = getId(),
-        children = [],
-      } = meta;
+  const eventHandlers: any = {};
+  let renderedChildren: any[] = [];
+  const {
+    type,
+    text,
+    style,
+    classes,
+    attributes,
+    events,
+    id = getId(),
+    children = [],
+  } = meta;
 
-      if (!type) {
-        throw new Error(`Type is required!`);
-      }
+  if (!type) {
+    throw new Error(`Type is required!`);
+  }
 
-      const newElement: HTMLElement = document.createElement(type);
+  const newElement: HTMLElement = document.createElement(type);
 
-      newElement.setAttribute('id', id);
+  newElement.setAttribute('id', id);
 
-      if (text && text !== '') {
-        newElement.innerText = text;
-      }
+  if (text && text !== '') {
+    newElement.innerText = text;
+  }
 
-      if (style) {
-        Object.keys(style).forEach((key) => {
-          newElement.style[key] = style[key];
-        });
-      }
+  if (style) {
+    Object.keys(style).forEach((key) => {
+      newElement.style[key] = style[key];
+    });
+  }
 
-      if (classes && classes.length) {
-        classes.forEach((klass) => {
-          newElement.classList.add(klass);
-        });
-      }
+  if (classes && classes.length) {
+    classes.forEach((klass) => {
+      newElement.classList.add(klass);
+    });
+  }
 
-      if (attributes) {
-        Object.keys(attributes).forEach((key) => {
-          newElement.setAttribute(key, attributes[key]);
-        });
-      }
+  if (attributes) {
+    Object.keys(attributes).forEach((key) => {
+      newElement.setAttribute(key, attributes[key]);
+    });
+  }
 
-      if (events) {
-        Object.keys(events).forEach((key) => {
-          newElement.addEventListener(key, events[key]);
-          eventHandlers[key] = events[key];
-        });
-      }
+  if (events) {
+    Object.keys(events).forEach((key) => {
+      newElement.addEventListener(key, events[key]);
+      eventHandlers[key] = events[key];
+    });
+  }
 
-      if (children) {
-        renderedChildren = children.map((child) =>
-          UIForm(newElement, child).render()
-        );
-      }
+  if (children) {
+    renderedChildren = children.map((child) => RenderForm(newElement, child));
+  }
 
-      target.appendChild(newElement);
+  target.appendChild(newElement);
 
-      // destroy
-      return () => {
-        renderedChildren.forEach((destroyChild) => destroyChild());
+  // destroy
+  return () => {
+    renderedChildren.forEach((destroyChild) => destroyChild());
 
-        Object.keys(eventHandlers).forEach((key) => {
-          newElement.removeEventListener(key, eventHandlers[key]);
-          delete eventHandlers[key];
-        });
-      };
-    },
+    Object.keys(eventHandlers).forEach((key) => {
+      newElement.removeEventListener(key, eventHandlers[key]);
+      delete eventHandlers[key];
+    });
   };
 }
 
@@ -121,9 +115,7 @@ const meta: any = {
   ],
 };
 
-const form = UIForm('app', meta);
-
-form.render();
+const close = RenderForm('app', meta);
 
 // event tokens
 // refactor
