@@ -7,16 +7,22 @@ function getId() {
   return idCounter;
 }
 
-function UIForm(targetId: string, meta: any): any {
-  const target: HTMLElement = document.getElementById(targetId);
+function UIForm(targetId: string | any, meta: any): any {
+  let target: HTMLElement;
+  if (typeof targetId === 'string') {
+    target = document.getElementById(targetId);
 
-  if (!target) {
-    throw new Error(`Target element ${targetId} not found!`);
+    if (!target) {
+      throw new Error(`Target element ${targetId} not found!`);
+    }
+  } else {
+    target = targetId;
   }
 
   return {
     render: () => {
       const eventHandlers: any = {};
+      let renderedChildren: any[] = [];
       const {
         type,
         text,
@@ -25,6 +31,7 @@ function UIForm(targetId: string, meta: any): any {
         attributes,
         events,
         id = getId(),
+        children = [],
       } = meta;
 
       if (!type) {
@@ -64,12 +71,18 @@ function UIForm(targetId: string, meta: any): any {
         });
       }
 
-      // children
+      if (children) {
+        renderedChildren = children.map((child) =>
+          UIForm(newElement, child).render()
+        );
+      }
 
       target.appendChild(newElement);
 
       // destroy
       return () => {
+        renderedChildren.forEach((destroyChild) => destroyChild());
+
         Object.keys(eventHandlers).forEach((key) => {
           newElement.removeEventListener(key, eventHandlers[key]);
           delete eventHandlers[key];
@@ -88,17 +101,30 @@ const meta: any = {
   },
   classes: ['container'],
   attributes: {
-    title: 'Hello Tooltip!',
+    title: 'Hello Tooltip',
   },
   events: {
-    click: (e) => alert(e.target.id),
+    click: (e) => alert('parent'),
   },
+  children: [
+    {
+      type: 'span',
+      text: 'hello from child',
+      classes: ['container'],
+      events: {
+        click: (e) => {
+          e.stopPropagation();
+          alert('hello from child');
+        },
+      },
+    },
+  ],
 };
 
 const form = UIForm('app', meta);
 
 form.render();
 
-// children
 // event tokens
 // refactor
+// arrays
