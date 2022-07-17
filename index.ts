@@ -7,7 +7,93 @@ function getId() {
   return idCounter;
 }
 
-function RenderForm(targetId: string | any, meta: any): any {
+type FormMeta = any;
+type FormState = any;
+
+function shouldUpdateValue(prev: any, current: any): boolean {
+  if (prev === undefined) {
+    return true;
+  }
+
+  if (current === undefined) {
+    return false;
+  }
+
+  if (prev === null && current !== null) {
+    return true;
+  }
+
+  if (prev !== null && current === null) {
+    return true;
+  }
+
+  return prev !== current;
+}
+
+function syncObjects(
+  prevIn: any,
+  currentIn: any,
+  onDelete: (key: string, value: any) => void,
+  onSet: (key: string, value: any, action: 'add' | 'update') => void,
+  onCompare: (prev: any, current: any) => boolean = shouldUpdateValue
+): any {
+  const prev = prevIn || {};
+  const current = currentIn || {};
+
+  const keysToDelete = Object.keys(prev).filter(
+    (key) => current[key] === undefined
+  );
+  const keysToAdd = Object.keys(current).filter(
+    (key) => prev[key] === undefined
+  );
+  const keysToUpdate = Object.keys(current).filter(
+    (key) => prev[key] !== undefined
+  );
+
+  keysToDelete.forEach((key) => onDelete(key, prev[key]));
+  keysToAdd.forEach((key) => onSet(key, current[key], 'add'));
+  keysToUpdate.forEach((key) => {
+    const prevValue: any = prev[key];
+    const currentValue: any = current[key];
+    if (onCompare(prevValue, currentValue)) {
+      onSet(key, currentValue, 'update');
+    }
+  });
+
+  return current;
+}
+
+function ArrayToMap<T>(
+  arrayIn: T[],
+  onGetKey: (item: T, index: number) => string
+): { [key: string]: T } {
+  return arrayIn.reduce((acc, item, idx) => {
+    const key = onGetKey(item, idx);
+    acc[key] = item;
+    return acc;
+  }, {} as { [key: string]: T });
+}
+
+function syncArrays<T>(
+  prevIn: T[] | undefined,
+  currentIn: T[] | undefined,
+  onGetKey: (item: T, index: number) => string,
+  onDelete: (key: string, value: any) => void,
+  onSet: (key: string, value: any, action: 'add' | 'update') => void,
+  onCompare: (prev: any, current: any) => boolean = shouldUpdateValue
+): T[] {
+  const prev: T[] = prevIn || [];
+  const current: T[] = currentIn || [];
+
+  const prevMap: any = ArrayToMap<T>(prev, onGetKey);
+  const currentMap: any = ArrayToMap<T>(current, onGetKey);
+
+  const obj = syncObjects(prevMap, currentMap, onDelete, onSet, onCompare);
+
+  return Object.values(obj);
+}
+
+function getTarget(targetId: string | HTMLElement): HTMLElement {
   let target: HTMLElement;
   if (typeof targetId === 'string') {
     target = document.getElementById(targetId);
@@ -15,74 +101,124 @@ function RenderForm(targetId: string | any, meta: any): any {
     if (!target) {
       throw new Error(`Target element ${targetId} not found!`);
     }
-  } else {
-    target = targetId;
+
+    return target;
   }
 
-  const eventHandlers: any = {};
+  return targetId;
+}
+
+function setElement(
+  target: HTMLElement,
+  meta: FormMeta,
+  onElement: (Element: HTMLElement) => void
+): HTMLElement {
+  const { type, id = getId() } = meta;
+
+  let element: HTMLElement = document.getElementById(id);
+  if (!element) {
+    if (!type) {
+      throw new Error(`Type is required!`);
+    }
+
+    element = document.createElement(type);
+    element.setAttribute('id', id);
+  }
+
+  onElement(element);
+
+  target.appendChild(element);
+
+  return element;
+}
+
+function setText(prev: any, current: any, element: HTMLElement): any {
+  if (shouldUpdateValue(prev, current)) {
+    element.innerText = current;
+  }
+
+  return current;
+}
+
+function setStyle(prev: any, current: any, element: HTMLElement): any {
+  return syncObjects(
+    prev,
+    current,
+    (key) => {
+      element.style.removeProperty(key);
+    },
+    (key, prop) => {
+      element.style[key] = prop;
+    }
+  );
+}
+
+function setClasses(prev: any, current: any, element: HTMLElement): any {
+  return syncArrays<string>(
+    prev,
+    current,
+    (klass) => klass,
+    (klass) => element.classList.remove(klass),
+    (klass, _value, action) => {
+      if (action === 'add') {
+        element.classList.add(klass);
+      }
+    }
+  );
+}
+
+function setAttributes(prev: any, current: any, element: HTMLElement): any {
+  return syncObjects(
+    prev,
+    current,
+    (key) => {
+      element.removeAttribute(key);
+    },
+    (key, prop) => {
+      element.setAttribute(key, prop);
+    }
+  );
+}
+
+function setEvents(prev: any, current: any, element: HTMLElement): any {
+  return syncObjects(
+    prev,
+    current,
+    (event, handler) => {
+      element.removeEventListener(event, handler);
+    },
+    (event, handler, action) => {
+      if (action === 'add') {
+        element.addEventListener(event, handler);
+      }
+    }
+  );
+}
+
+function RenderForm(targetId: string | HTMLElement, meta: FormMeta): any {
+  const target = getTarget(targetId);
+
   let renderedChildren: any[] = [];
-  const {
-    type,
-    text,
-    style,
-    classes,
-    attributes,
-    events,
-    id = getId(),
-    children = [],
-  } = meta;
+  const state: FormState = {};
+  const { text, style, classes, attributes, events, children = [] } = meta;
 
-  if (!type) {
-    throw new Error(`Type is required!`);
-  }
+  const element = setElement(target, meta, (e) => {
+    state.text = setText(state.text, text, e);
+    state.style = setStyle(state.style, style, e);
+    state.classes = setClasses(state.classes, classes, e);
+    state.attributes = setAttributes(state.attributes, attributes, e);
+    state.events = setEvents(state.events, events, e);
 
-  const newElement: HTMLElement = document.createElement(type);
-
-  newElement.setAttribute('id', id);
-
-  if (text && text !== '') {
-    newElement.innerText = text;
-  }
-
-  if (style) {
-    Object.keys(style).forEach((key) => {
-      newElement.style[key] = style[key];
-    });
-  }
-
-  if (classes && classes.length) {
-    classes.forEach((klass) => {
-      newElement.classList.add(klass);
-    });
-  }
-
-  if (attributes) {
-    Object.keys(attributes).forEach((key) => {
-      newElement.setAttribute(key, attributes[key]);
-    });
-  }
-
-  if (events) {
-    Object.keys(events).forEach((key) => {
-      newElement.addEventListener(key, events[key]);
-      eventHandlers[key] = events[key];
-    });
-  }
-
-  if (children) {
-    renderedChildren = children.map((child) => RenderForm(newElement, child));
-  }
-
-  target.appendChild(newElement);
+    if (children) {
+      renderedChildren = children.map((child) => RenderForm(e, child));
+    }
+  });
 
   // destroy
   return () => {
     renderedChildren.forEach((destroyChild) => destroyChild());
 
-    Object.keys(eventHandlers).forEach((key) => {
-      newElement.removeEventListener(key, eventHandlers[key]);
-      delete eventHandlers[key];
-    });
+    setEvents(state.events, [], element);
   };
 }
 
@@ -117,6 +253,7 @@ const meta: any = {
 
 const close = RenderForm('app', meta);
 
+// children state
 // event tokens
-// refactor
+// bindings
 // arrays
