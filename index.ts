@@ -1,12 +1,6 @@
 // Import stylesheets
 import './style.css';
 
-let idCounter = 0;
-function getId() {
-  idCounter++;
-  return idCounter;
-}
-
 type FormMeta = any;
 type FormState = any;
 
@@ -113,7 +107,11 @@ function setElement(
   meta: FormMeta,
   onElement: (Element: HTMLElement) => void
 ): HTMLElement {
-  const { type, id = getId() } = meta;
+  const { type, id } = meta;
+
+  if (!id) {
+    throw new Error(`Id is required!`);
+  }
 
   let element: HTMLElement = document.getElementById(id);
   if (!element) {
@@ -195,30 +193,49 @@ function setEvents(prev: any, current: any, element: HTMLElement): any {
   );
 }
 
+function setChildren(prev: any, current: any, element: HTMLElement): any {
+  return syncArrays<FormMeta | FormState>(
+    prev,
+    current,
+    (c) => c.id,
+    (_key: string, child: any) => {
+      if (child.dispose) {
+        child.dispose();
+      }
+    },
+    (_key: string, child: any) => {
+      const childState = child.getState ? child.getState() : child;
+      return RenderForm(element, childState);
+    }
+  );
+}
+
 function RenderForm(targetId: string | HTMLElement, meta: FormMeta): any {
   const target = getTarget(targetId);
 
-  let renderedChildren: any[] = [];
-  const state: FormState = {};
+  let state: FormState = {};
   const { text, style, classes, attributes, events, children = [] } = meta;
 
   const element = setElement(target, meta, (e) => {
+    state.element = e;
+    state.id = e.getAttribute('id');
     state.text = setText(state.text, text, e);
     state.style = setStyle(state.style, style, e);
     state.classes = setClasses(state.classes, classes, e);
     state.attributes = setAttributes(state.attributes, attributes, e);
     state.events = setEvents(state.events, events, e);
-
-    if (children) {
-      renderedChildren = children.map((child) => RenderForm(e, child));
-    }
+    state.children = setChildren(state.children, children, e);
   });
 
-  // destroy
-  return () => {
-    renderedChildren.forEach((destroyChild) => destroyChild());
-
-    setEvents(state.events, [], element);
+  return {
+    getState: () => {
+      return state;
+    },
+    dispose: () => {
+      setEvents(state.events, [], element);
+      setChildren(state.children, [], element);
+      state = {};
+    },
   };
 }
 
@@ -238,7 +255,8 @@ const meta: any = {
   },
   children: [
     {
-      type: 'span',
+      id: 'myDiv',
+      type: 'div',
       text: 'hello from child',
       classes: ['container'],
       events: {
@@ -247,11 +265,34 @@ const meta: any = {
           alert('hello from child');
         },
       },
+      children: [
+        {
+          id: 'myDiv2',
+          type: 'div',
+          text: 'hello from child 2',
+          classes: ['container'],
+          events: {
+            click: (e) => {
+              e.stopPropagation();
+              alert('hello from child 2');
+            },
+          },
+        },
+      ],
     },
   ],
 };
 
-const close = RenderForm('app', meta);
+const form = RenderForm('app', meta);
+
+setTimeout(() => {
+  form.dispose();
+}, 5000);
+
+//const prevState = form.getState();
+//const form2 = RenderForm(prevState.element, prevState);
+
+//console.log(form2.getState());
 
 // children state
 // event tokens
