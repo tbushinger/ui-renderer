@@ -1,34 +1,23 @@
-import { Disposable } from '../interfaces/disposable';
-
-export class Attribute implements Disposable {
+export default class Attribute {
   private _element: HTMLElement;
   private _key: string;
   private _value: any;
 
-  constructor(element: HTMLElement, key: string, value?: any) {
+  private constructor(element: HTMLElement, key: string, value: any) {
     this._element = element;
     this._key = key;
-    this._value = null;
-
-    this.value = value;
+    this.set(value);
   }
 
-  public get key() {
-    return this._key;
-  }
-
-  public get value() {
+  public get() {
     return this._value;
   }
 
-  public set value(newValue: any) {
-    const _newValue = newValue !== undefined ? null : newValue;
-    if (this._value === _newValue) {
-      return;
+  public set(value: any) {
+    if (this._value === undefined || this._value !== value) {
+      this._value = value;
+      this._element.setAttribute(this._key, this._value);
     }
-
-    this._value = newValue;
-    this._element.setAttribute(this._key, this._value);
   }
 
   public dispose(): void {
@@ -37,12 +26,12 @@ export class Attribute implements Disposable {
     this._key = undefined;
     this._value = undefined;
   }
-}
 
-export default function create(
-  element: HTMLElement,
-  key: string,
-  value?: any
-): Attribute {
-  return new Attribute(element, key, value);
+  public static create(
+    element: HTMLElement,
+    key: string,
+    value: any
+  ): Attribute {
+    return new Attribute(element, key, value);
+  }
 }

@@ -1,37 +1,31 @@
-import createAttribute, { Attribute } from './attribute';
-import { Dictionary } from '../interfaces/dictionary';
-import { Disposable } from '../interfaces/disposable';
+import Attribute from './attribute';
 
-type AttributeMap = {
+export type AttributeMap = {
   [key: string]: Attribute;
 };
 
-export class Attributes implements Dictionary<Attribute>, Disposable {
+export default class Attributes {
   private _element: HTMLElement;
-  private _attributues: AttributeMap;
+  private _attributes: AttributeMap;
 
-  constructor(element: HTMLElement, attributues?: AttributeMap) {
+  private constructor(element: HTMLElement, attributes?: AttributeMap) {
     this._element = element;
-    this._attributues = attributues || {};
+    this._attributes = attributes || {};
   }
 
-  public add(key: string, value: any): Attributes {
+  public setIn(key: string, value: any): Attributes {
     if (this.has(key)) {
-      throw new Error(`Key ${key} already exists!`);
+      this.getIn(key).set(value);
+      return this;
     }
 
-    this._attributues[key] = createAttribute(this._element, key, value);
+    this._attributes[key] = Attribute.create(this._element, key, value);
 
-    return this;
-  }
-
-  public update(key: string, attribute: Attribute): Attributes {
-    this._attributues[key] = attribute;
     return this;
   }
 
   public has(key: string): boolean {
-    return this._attributues[key] !== undefined;
+    return this._attributes[key] !== undefined;
   }
 
   public remove(key: string): Attributes {
@@ -39,33 +33,25 @@ export class Attributes implements Dictionary<Attribute>, Disposable {
       return this;
     }
 
-    this._attributues[key].dispose();
-    delete this._attributues[key];
+    this._attributes[key].dispose();
+
+    delete this._attributes[key];
   }
 
-  public item(key: string): Attribute | null {
-    if (!this.has(key)) {
-      return null;
-    }
-
-    return this._attributues[key];
+  public getIn(key: string): Attribute | undefined {
+    return this._attributes[key];
   }
 
-  public forEach(callback: (key: string, attribute: Attribute) => void): void {
-    Object.keys(this._attributues).forEach((key) => {
-      callback(key, this._attributues[key]);
-    });
+  public forEach(callback: (attribute: Attribute) => void): void {
+    Object.values(this._attributes).forEach(callback);
   }
 
   public dispose(): void {
-    this.forEach((key) => this.remove(key));
-    this._attributues = undefined;
+    this.forEach((attribute) => attribute.dispose());
+    this._attributes = undefined;
   }
-}
 
-export default function create(
-  element: HTMLElement,
-  attributues?: AttributeMap
-): Attributes {
-  return new Attributes(element, attributues);
+  public static create(element: HTMLElement, attributes?: AttributeMap): Attributes {
+    return new Attributes(element, attributes);
+  }
 }
