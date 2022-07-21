@@ -1,3 +1,5 @@
+import areEqual from '../utils/equal';
+
 export default class CssClass {
   private _element: HTMLElement;
   private _name: string;
@@ -7,15 +9,19 @@ export default class CssClass {
     this.set(name);
   }
 
-  public get() {
+  public get(): string {
     return this._name;
   }
 
-  public set(name: string) {
-    if (this._name === undefined || this._name !== name) {
-      this._name = name;
-      this._element.classList.add(this._name);
+  public set(name: string): CssClass {
+    if (areEqual(this._name, name)) {
+      return this;
     }
+
+    this._name = name;
+    this._element.classList.add(this._name);
+
+    return this;
   }
 
   public dispose(): void {

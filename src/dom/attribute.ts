@@ -1,3 +1,5 @@
+import areEqual from '../utils/equal';
+
 export default class Attribute {
   private _element: HTMLElement;
   private _key: string;
@@ -9,15 +11,19 @@ export default class Attribute {
     this.set(value);
   }
 
-  public get() {
+  public get(): any {
     return this._value;
   }
 
-  public set(value: any) {
-    if (this._value === undefined || this._value !== value) {
-      this._value = value;
-      this._element.setAttribute(this._key, this._value);
+  public set(value: any): Attribute {
+    if (areEqual(this._value, value)) {
+      return this;
     }
+
+    this._value = value;
+    this._element.setAttribute(this._key, this._value);
+
+    return this;
   }
 
   public dispose(): void {

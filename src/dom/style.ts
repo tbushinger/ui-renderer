@@ -1,3 +1,5 @@
+import areEqual from '../utils/equal';
+
 export default class Style {
   private _element: HTMLElement;
   private _prop: string;
@@ -9,15 +11,19 @@ export default class Style {
     this.set(value);
   }
 
-  public get() {
+  public get(): any {
     return this._value;
   }
 
-  public set(value: any) {
-    if (this._value === undefined || this._value !== value) {
-      this._value = value;
-      this._element.style[this._prop] = this._value;
+  public set(value: any): Style {
+    if (areEqual(this._value, value)) {
+      return this;
     }
+
+    this._value = value;
+    this._element.style[this._prop] = this._value;
+
+    return this;
   }
 
   public dispose(): void {
