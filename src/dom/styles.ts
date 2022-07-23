@@ -36,6 +36,8 @@ export default class Styles {
     this._styles[prop].dispose();
 
     delete this._styles[prop];
+
+    return this;
   }
 
   public getIn(prop: string): Style | undefined {

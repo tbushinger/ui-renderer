@@ -35,6 +35,8 @@ export default class CssClasses {
     this._cssClasses[name].dispose();
 
     delete this._cssClasses[name];
+
+    return this;
   }
 
   public getIn(name: string): CssClass | undefined {

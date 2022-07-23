@@ -36,6 +36,8 @@ export default class Attributes {
     this._attributes[key].dispose();
 
     delete this._attributes[key];
+
+    return this;
   }
 
   public getIn(key: string): Attribute | undefined {
@@ -51,7 +53,10 @@ export default class Attributes {
     this._attributes = undefined;
   }
 
-  public static create(element: HTMLElement, attributes?: AttributeMap): Attributes {
+  public static create(
+    element: HTMLElement,
+    attributes?: AttributeMap
+  ): Attributes {
     return new Attributes(element, attributes);
   }
 }

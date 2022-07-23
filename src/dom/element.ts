@@ -7,23 +7,23 @@ import Styles from './styles';
 
 const createId = Id();
 
-function getTarget(targetId: string | HTMLElement): HTMLElement {
-  let target: HTMLElement;
-  if (typeof targetId === 'string') {
-    target = document.getElementById(targetId);
+function getParent(parentId: string | HTMLElement): HTMLElement {
+  let parent: HTMLElement;
+  if (typeof parentId === 'string') {
+    parent = document.getElementById(parentId);
 
-    if (!target) {
-      throw new Error(`Target element ${targetId} not found!`);
+    if (!parent) {
+      throw new Error(`Parent element ${parentId} not found!`);
     }
 
-    return target;
+    return parent;
   }
 
-  return targetId;
+  return parentId;
 }
 
 export default class Element {
-  private _target: HTMLElement;
+  private _parent: HTMLElement;
   private _element: HTMLElement;
   private _tagName: string;
   private _text: string;
@@ -33,13 +33,14 @@ export default class Element {
   private _cssClasses: CssClasses;
   private _styles: Styles;
   private _appended: boolean;
+  private _children: Elements;
 
   private constructor(
-    target: HTMLElement | string,
+    parent: HTMLElement | string,
     tagName: string,
     id?: string
   ) {
-    this._target = getTarget(target);
+    this._parent = getParent(parent);
     this._tagName = tagName;
     this._id = id || createId();
     this._element = document.createElement(tagName);
@@ -47,8 +48,17 @@ export default class Element {
     this._events = Events.create(this._element);
     this._cssClasses = CssClasses.create(this._element);
     this._styles = Styles.create(this._element);
+    this._children = Elements.create();
 
     this.attributes().setIn('id', id);
+  }
+
+  public getParentDOMElement(): HTMLElement {
+    return this._parent;
+  }
+
+  public getDOMElement(): HTMLElement {
+    return this._element;
   }
 
   public getId(): string {
@@ -57,6 +67,10 @@ export default class Element {
 
   public getText(): string {
     return this._text;
+  }
+
+  public getTagName(): string {
+    return this._tagName;
   }
 
   public setText(text: string): Element {
@@ -86,22 +100,50 @@ export default class Element {
     return this._styles;
   }
 
+  public children(): Elements {
+    return this._children;
+  }
+
+  public addChild(tagName: string, setupChild: (child: Element) => Element = c => c, id?: string): Element {
+    const child = new Element(this.getDOMElement(), tagName, id);
+    const updatedChild = setupChild(child);
+
+    this.children().setIn(updatedChild.getId(), child);
+
+    return this;
+  }
+
   public render(): Element {
+    this.children().render();
+
     if (!this._appended) {
-      this._target.appendChild(this._element);
+      this._parent.appendChild(this._element);
+      this._appended = true;
     }
 
     return this;
   }
 
-  // here
-  // children
-
   public dispose(): void {
-    this._element.removeElement(this._tagName);
-    this._element = undefined;
+    this.children().dispose();
+    this.attributes().dispose();
+    this.events().dispose();
+    this.classes().dispose();
+    this.styles().dispose();
+    
+    this._id = undefined;
     this._tagName = undefined;
-    this._value = undefined;
+    this._text = undefined;
+    this._attributes = undefined;
+    this._events = undefined;
+    this._cssClasses = undefined;
+    this._styles = undefined;
+    this._children = undefined;
+    this._appended = undefined;
+
+    this.getParentDOMElement().removeChild(this.getDOMElement());
+    this._element = undefined;
+    this._parent = undefined;
   }
 
   public static create(
@@ -110,5 +152,65 @@ export default class Element {
     value: any
   ): Element {
     return new Element(element, tagName, value);
+  }
+}
+
+export type ElementMap = {
+  [id: string]: Element;
+};
+
+export class Elements {
+  private _elements: ElementMap;
+
+  private constructor() {
+    this._elements = {};
+  }
+
+  public setIn(id: string, element: Element): Elements {
+    if (this.has(id)) {
+      return this;
+    }
+
+    this._elements[id] = element;
+
+    return this;
+  }
+
+  public has(id: string): boolean {
+    return this._elements[id] !== undefined;
+  }
+
+  public remove(id: string): Elements {
+    if (!this.has(id)) {
+      return this;
+    }
+
+    this._elements[id].dispose();
+
+    delete this._elements[id];
+
+    return this;
+  }
+
+  public getIn(id: string): Element | undefined {
+    return this._elements[id];
+  }
+
+  public forEach(callback: (element: Element) => void): void {
+    Object.values(this._elements).forEach(callback);
+  }
+
+  public render(): Elements {
+    this.forEach((element) => element.render());
+    return this;
+  }
+
+  public dispose(): void {
+    this.forEach((element) => element.dispose());
+    this._elements = undefined;
+  }
+
+  public static create(): Elements {
+    return new Elements();
   }
 }
