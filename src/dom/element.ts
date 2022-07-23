@@ -43,11 +43,12 @@ export default class Element {
     this._tagName = tagName;
     this._id = id || createId();
     this._element = document.createElement(tagName);
-    this._element.setAttribute('id', id);
     this._attributes = Attributes.create(this._element);
     this._events = Events.create(this._element);
     this._cssClasses = CssClasses.create(this._element);
     this._styles = Styles.create(this._element);
+
+    this.attributes().setIn('id', id);
   }
 
   public getId(): string {
