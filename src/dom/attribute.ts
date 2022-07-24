@@ -1,36 +1,58 @@
 import areEqual from '../utils/equal';
+import { Disposable, DisposableContainer } from '../utils/disposable';
 
-export default class Attribute {
-  private _element: HTMLElement;
-  private _key: string;
-  private _value: any;
+const Keys = {
+  element: 'element',
+  key: 'key',
+  value: 'value',
+};
+
+export default class Attribute implements Disposable {
+  private _container: DisposableContainer;
 
   private constructor(element: HTMLElement, key: string, value: any) {
-    this._element = element;
-    this._key = key;
-    this.set(value);
+    this._container = DisposableContainer.create(
+      {
+        element,
+        key,
+        value,
+      },
+      (c) => {
+        const elem: HTMLElement = c.get(Keys.element);
+        const key: string = c.get(Keys.key);
+
+        elem.removeAttribute(key);
+      }
+    );
   }
 
   public get(): any {
-    return this._value;
+    return this._container.get(Keys.value);
   }
 
   public set(value: any): Attribute {
-    if (areEqual(this._value, value)) {
+    const container = this._container;
+
+    if (areEqual(container.get(Keys.value), value)) {
       return this;
     }
 
-    this._value = value;
-    this._element.setAttribute(this._key, this._value);
+    container.set(Keys.value, value);
+
+    const element: HTMLElement = container.get(Keys.element);
+    const key: string = container.get(Keys.key);
+
+    element.setAttribute(key, value);
 
     return this;
   }
 
+  public isDisposed(): boolean {
+    return this._container.isDisposed();
+  }
+
   public dispose(): void {
-    this._element.removeAttribute(this._key);
-    this._element = undefined;
-    this._key = undefined;
-    this._value = undefined;
+    this._container.dispose();
   }
 
   public static create(

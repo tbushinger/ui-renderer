@@ -1,55 +1,67 @@
-import areEqual from '../utils/equal';
+import { Disposable, DisposableContainer } from '../utils/disposable';
 import Id from '../utils/id';
+
+const Keys = {
+  element: 'element',
+  id: 'id',
+  name: 'name',
+  handler: 'handler',
+};
 
 const createId = Id();
 
-export default class Event {
-  private _element: HTMLElement;
-  private _id: string;
-  private _name: string;
-  private _handler: EventListenerOrEventListenerObject;
+export default class Event implements Disposable {
+  private _container: DisposableContainer;
 
   private constructor(
     element: HTMLElement,
     name: string,
     handler: EventListenerOrEventListenerObject
   ) {
-    this._element = element;
-    this.set(name, handler);
+    this._container = DisposableContainer.create(
+      {
+        element,
+        name,
+        handler,
+        id: createId(),
+      },
+      (c) => {
+        const elem: HTMLElement = c.get(Keys.element);
+        const name: string = c.get(Keys.name);
+        const _handler: EventListenerOrEventListenerObject = c.get(
+          Keys.handler
+        );
+
+        elem.removeEventListener(name, _handler);
+      }
+    );
+
+    element.addEventListener(name, handler);
   }
 
   public getId(): string {
-    return this._id;
+    const id: string = this._container.get(Keys.id);
+    return id;
   }
 
   public getName(): string {
-    return this._name;
+    const name: string = this._container.get(Keys.name);
+    return name;
   }
 
   public getHandler(): EventListenerOrEventListenerObject {
-    return this._handler;
+    const handler: EventListenerOrEventListenerObject = this._container.get(
+      Keys.handler
+    );
+    return handler;
   }
 
-  public set(name: string, handler: EventListenerOrEventListenerObject): Event {
-    if (areEqual(this._handler, handler) && areEqual(this._name, name)) {
-      return this;
-    }
-
-    this._id = createId();
-    this._name = name;
-    this._handler = handler;
-
-    this._element.addEventListener(this._name, this._handler);
-
-    return this;
+  public isDisposed(): boolean {
+    return this._container.isDisposed();
   }
 
   public dispose(): void {
-    this._element.removeEventListener(this._name, this._handler);
-    this._element = undefined;
-    this._id = undefined;
-    this._name = undefined;
-    this._handler = undefined;
+    this._container.dispose();
   }
 
   public static create(

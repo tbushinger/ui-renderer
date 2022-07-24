@@ -1,36 +1,58 @@
 import areEqual from '../utils/equal';
+import { Disposable, DisposableContainer } from '../utils/disposable';
 
-export default class Style {
-  private _element: HTMLElement;
-  private _prop: string;
-  private _value: any;
+const Keys = {
+  element: 'element',
+  prop: 'prop',
+  value: 'value',
+};
+
+export default class Style implements Disposable {
+  private _container: DisposableContainer;
 
   private constructor(element: HTMLElement, prop: string, value: any) {
-    this._element = element;
-    this._prop = prop;
-    this.set(value);
+    this._container = DisposableContainer.create(
+      {
+        element,
+        prop,
+        value,
+      },
+      (c) => {
+        const elem: HTMLElement = c.get(Keys.element);
+        const prop: string = c.get(Keys.prop);
+
+        elem.style.removeProperty(prop);
+      }
+    );
   }
 
   public get(): any {
-    return this._value;
+    const value = this._container.get(Keys.value);
+    return value;
   }
 
   public set(value: any): Style {
-    if (areEqual(this._value, value)) {
+    const container = this._container;
+    if (areEqual(container.get(Keys.value), value)) {
       return this;
     }
 
-    this._value = value;
-    this._element.style[this._prop] = this._value;
+    container.set(Keys.value, value);
+
+    const element: HTMLElement = container.get(Keys.element);
+    const prop: string = container.get(Keys.prop);
+
+    element.style[prop] = value;
 
     return this;
   }
 
+  public isDisposed(): boolean {
+    return this._container.isDisposed();
+  }
+
   public dispose(): void {
-    this._element.style.removeProperty(this._prop);
-    this._element = undefined;
-    this._prop = undefined;
-    this._value = undefined;
+    this._container.dispose();
   }
 
   public static create(element: HTMLElement, prop: string, value: any): Style {

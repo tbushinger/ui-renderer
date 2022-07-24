@@ -1,33 +1,55 @@
 import areEqual from '../utils/equal';
+import { Disposable, DisposableContainer } from '../utils/disposable';
 
-export default class CssClass {
-  private _element: HTMLElement;
-  private _name: string;
+const Keys = {
+  element: 'element',
+  name: 'name',
+};
+
+export default class CssClass implements Disposable {
+  private _container: DisposableContainer;
 
   private constructor(element: HTMLElement, name: string) {
-    this._element = element;
-    this.set(name);
+    this._container = DisposableContainer.create(
+      {
+        element,
+        name,
+      },
+      (c) => {
+        const elem: HTMLElement = c.get(Keys.element);
+        const name: string = c.get(Keys.name);
+
+        elem.classList.remove(name);
+      }
+    );
   }
 
   public get(): string {
-    return this._name;
+    const name: string = this._container.get(Keys.name);
+    return name;
   }
 
   public set(name: string): CssClass {
-    if (areEqual(this._name, name)) {
+    const container = this._container;
+
+    if (areEqual(container.get(Keys.name), name)) {
       return this;
     }
 
-    this._name = name;
-    this._element.classList.add(this._name);
+    container.set(Keys.name, name);
+
+    const elem: HTMLElement = container.get(Keys.element);
+    elem.classList.add(name);
 
     return this;
   }
 
+  public isDisposed(): boolean {
+    return this._container.isDisposed();
+  }
+
   public dispose(): void {
-    this._element.classList.remove(this._name);
-    this._element = undefined;
-    this._name = undefined;
+    this._container.dispose();
   }
 
   public static create(element: HTMLElement, name: string): CssClass {

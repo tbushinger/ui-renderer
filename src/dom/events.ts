@@ -1,94 +1,89 @@
+import { Disposable, DisposableContainer } from '../utils/disposable';
 import Event from './event';
 
-export default class Events {
-  private _element: HTMLElement;
-  private _events: Event[];
+const Keys = {
+  element: 'element',
+  eventMap: 'eventMap',
+};
 
-  private constructor(element: HTMLElement, events?: Event[]) {
-    this._element = element;
-    this._events = events || [];
-  }
+export type EventMap = {
+  [id: string]: Event;
+};
 
-  public forEach(
-    callback: (event: Event) => boolean | undefined
-  ): Event | undefined {
-    let position = 0;
-    while (position < this._events.length) {
-      const event = this._events[position];
-      const result = callback(event);
+export default class Events implements Disposable {
+  private _container: DisposableContainer;
 
-      if (result === true) {
-        return event;
+  private constructor(element: HTMLElement) {
+    this._container = DisposableContainer.create(
+      {
+        element,
+        eventMap: {},
+      },
+      () => {
+        this.forEach((event) => event.dispose());
       }
-
-      position++;
-    }
-
-    return undefined;
-  }
-
-  public getIn(
-    name: string,
-    handler: EventListenerOrEventListenerObject
-  ): Event | undefined {
-    return this.forEach((event) => {
-      if (event.getName() === name && event.getHandler() === handler) {
-        return true;
-      }
-
-      return undefined;
-    });
+    );
   }
 
   public setIn(
     name: string,
-    handler: EventListenerOrEventListenerObject
-  ): Events {
-    const existing = this.getIn(name, handler);
-    if (existing) {
+    handler: EventListenerOrEventListenerObject,
+    id?: string
+  ): string {
+    const container = this._container;
+    if (id && this.has(id)) {
+      return id;
+    }
+
+    const eventMap: EventMap = container.get(Keys.eventMap);
+    const element: HTMLElement = container.get(Keys.element);
+
+    const event = Event.create(element, name, handler);
+    const newId = id || event.getId();
+    eventMap[newId] = event;
+
+    return newId;
+  }
+
+  public has(id: string): boolean {
+    const eventMap: EventMap = this._container.get(Keys.eventMap);
+    return eventMap[id] !== undefined;
+  }
+
+  public remove(id: string): Events {
+    if (!this.has(id)) {
       return this;
     }
 
-    this._events.push(Event.create(this._element, name, handler));
+    const eventMap: EventMap = this._container.get(Keys.eventMap);
+    const event: Event = eventMap[id];
+
+    event.dispose();
+
+    delete eventMap[id];
 
     return this;
   }
 
-  public remove(match: (current: Event) => boolean): Events {
-    const nextEvents = [];
-    this.forEach((e) => {
-      if (match(e)) {
-        e.dispose();
-      } else {
-        nextEvents.push(e);
-      }
-
-      return undefined;
-    });
-
-    this._events = nextEvents;
-
-    return this;
+  public getIn(id: string): Event | undefined {
+    const eventMap: EventMap = this._container.get(Keys.eventMap);
+    return eventMap[id];
   }
 
-  public removeByName(name: string): Events {
-    return this.remove((e) => e.getName() === name);
+  public forEach(callback: (event: Event) => void): void {
+    const eventMap: EventMap = this._container.get(Keys.eventMap);
+    Object.values(eventMap).forEach(callback);
   }
 
-  public removeById(id: string): Events {
-    return this.remove((e) => e.getId() === id);
-  }
-
-  public removeAll(): Events {
-    return this.remove(() => true);
+  public isDisposed(): boolean {
+    return this._container.isDisposed();
   }
 
   public dispose(): void {
-    this.removeAll();
-    this._events = undefined;
+    this._container.dispose();
   }
 
-  public static create(element: HTMLElement, events?: Event[]): Events {
-    return new Events(element, events);
+  public static create(element: HTMLElement): Events {
+    return new Events(element);
   }
 }

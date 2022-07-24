@@ -1,16 +1,28 @@
 import CssClass from './cssClass';
+import { Disposable, DisposableContainer } from '../utils/disposable';
+
+const Keys = {
+  element: 'element',
+  cssClassMap: 'cssClassMap',
+};
 
 export type CssClassMap = {
   [name: string]: CssClass;
 };
 
-export default class CssClasses {
-  private _element: HTMLElement;
-  private _cssClasses: CssClassMap;
+export default class CssClasses implements Disposable {
+  private _container: DisposableContainer;
 
-  private constructor(element: HTMLElement, cssClasses?: CssClassMap) {
-    this._element = element;
-    this._cssClasses = cssClasses || {};
+  private constructor(element: HTMLElement) {
+    this._container = DisposableContainer.create(
+      {
+        element,
+        cssClassMap: {},
+      },
+      () => {
+        this.forEach((cssClass) => cssClass.dispose());
+      }
+    );
   }
 
   public setIn(name: string): CssClasses {
@@ -18,13 +30,18 @@ export default class CssClasses {
       return this;
     }
 
-    this._cssClasses[name] = CssClass.create(this._element, name);
+    const container = this._container;
+    const cssClassMap: CssClassMap = container.get(Keys.cssClassMap);
+    const element: HTMLElement = container.get(Keys.element);
+
+    cssClassMap[name] = CssClass.create(element, name);
 
     return this;
   }
 
   public has(name: string): boolean {
-    return this._cssClasses[name] !== undefined;
+    const cssClassMap: CssClassMap = this._container.get(Keys.cssClassMap);
+    return cssClassMap[name] !== undefined;
   }
 
   public remove(name: string): CssClasses {
@@ -32,30 +49,35 @@ export default class CssClasses {
       return this;
     }
 
-    this._cssClasses[name].dispose();
+    const cssClassMap: CssClassMap = this._container.get(Keys.cssClassMap);
+    const cssClass: CssClass = cssClassMap[name];
 
-    delete this._cssClasses[name];
+    cssClass.dispose();
+
+    delete cssClassMap[name];
 
     return this;
   }
 
   public getIn(name: string): CssClass | undefined {
-    return this._cssClasses[name];
+    const cssClassMap: CssClassMap = this._container.get(Keys.cssClassMap);
+    return cssClassMap[name];
   }
 
   public forEach(callback: (cssClass: CssClass) => void): void {
-    Object.values(this._cssClasses).forEach(callback);
+    const cssClassMap: CssClassMap = this._container.get(Keys.cssClassMap);
+    Object.values(cssClassMap).forEach(callback);
+  }
+
+  public isDisposed(): boolean {
+    return this._container.isDisposed();
   }
 
   public dispose(): void {
-    this.forEach((cssClass) => cssClass.dispose());
-    this._cssClasses = undefined;
+    this._container.dispose();
   }
 
-  public static create(
-    element: HTMLElement,
-    cssClasses?: CssClassMap
-  ): CssClasses {
-    return new CssClasses(element, cssClasses);
+  public static create(element: HTMLElement): CssClasses {
+    return new CssClasses(element);
   }
 }
