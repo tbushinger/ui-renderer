@@ -1,11 +1,26 @@
 import areEqual from '../utils/equal';
 import Attributes from './attributes';
 import CssClasses from './cssClasses';
+import { Disposable, DisposableContainer } from '../utils/disposable';
 import Events from './events';
 import Id from '../utils/id';
 import Styles from './styles';
 
 const createId = Id();
+
+const Keys = {
+  parent: 'parent',
+  element: 'element',
+  tagName: 'tagName',
+  text: 'text',
+  id: 'id',
+  attributes: 'attributes',
+  events: 'events',
+  cssClasses: 'cssClasses',
+  styles: 'styles',
+  appended: 'appended',
+  children: 'children',
+};
 
 function getParent(parentId: string | HTMLElement): HTMLElement {
   let parent: HTMLElement;
@@ -22,89 +37,107 @@ function getParent(parentId: string | HTMLElement): HTMLElement {
   return parentId;
 }
 
-export default class Element {
-  private _parent: HTMLElement;
-  private _element: HTMLElement;
-  private _tagName: string;
-  private _text: string;
-  private _id: string;
-  private _attributes: Attributes;
-  private _events: Events;
-  private _cssClasses: CssClasses;
-  private _styles: Styles;
-  private _appended: boolean;
-  private _children: Elements;
+export default class Element implements Disposable {
+  private _container: DisposableContainer;
 
   private constructor(
-    parent: HTMLElement | string,
+    parentOrId: HTMLElement | string,
     tagName: string,
-    id?: string
+    optionalId?: string
   ) {
-    this._parent = getParent(parent);
-    this._tagName = tagName;
-    this._id = id || createId();
-    this._element = document.createElement(tagName);
-    this._attributes = Attributes.create(this._element);
-    this._events = Events.create(this._element);
-    this._cssClasses = CssClasses.create(this._element);
-    this._styles = Styles.create(this._element);
-    this._children = Elements.create();
+    const parent = getParent(parentOrId);
+    const element = document.createElement(tagName);
+    const id = optionalId || createId();
+
+    this._container = DisposableContainer.create(
+      {
+        id,
+        element,
+        tagName,
+        parent,
+        attributes: Attributes.create(element),
+        events: Events.create(element),
+        cssClasses: CssClasses.create(element),
+        styles: Styles.create(element),
+        children: Elements.create(),
+      },
+      () => {
+        parent.removeChild(element);
+      }
+    );
 
     this.attributes().setIn('id', id);
   }
 
   public getParentDOMElement(): HTMLElement {
-    return this._parent;
+    const parent: HTMLElement = this._container.get(Keys.parent);
+    return parent;
   }
 
   public getDOMElement(): HTMLElement {
-    return this._element;
+    const element: HTMLElement = this._container.get(Keys.element);
+    return element;
   }
 
   public getId(): string {
-    return this._id;
+    const id: string = this._container.get(Keys.id);
+    return id;
   }
 
   public getText(): string {
-    return this._text;
+    const text: string = this._container.get(Keys.text);
+    return text;
   }
 
   public getTagName(): string {
-    return this._tagName;
+    const tagName: string = this._container.get(Keys.tagName);
+    return tagName;
   }
 
   public setText(text: string): Element {
-    if (areEqual(this._text, text)) {
+    const container = this._container;
+    if (areEqual(container.get(Keys.text), text)) {
       return this;
     }
 
-    this._text = text;
-    this._element.innerText = this._text;
+    container.set(Keys.text, text);
+    const element: HTMLElement = this._container.get(Keys.element);
+
+    element.innerText = text;
 
     return this;
   }
 
   public attributes(): Attributes {
-    return this._attributes;
+    const attributes: Attributes = this._container.get(Keys.attributes);
+    return attributes;
   }
 
   public events(): Events {
-    return this._events;
+    const events: Events = this._container.get(Keys.events);
+    return events;
   }
 
   public classes(): CssClasses {
-    return this._cssClasses;
+    const cssClasses: CssClasses = this._container.get(Keys.cssClasses);
+    return cssClasses;
   }
 
   public styles(): Styles {
-    return this._styles;
+    const styles: Styles = this._container.get(Keys.styles);
+    return styles;
   }
 
   public children(): Elements {
-    return this._children;
+    const children: Elements = this._container.get(Keys.children);
+    return children;
   }
 
-  public addChild(tagName: string, setupChild: (child: Element) => Element = c => c, id?: string): Element {
+  public addChild(
+    tagName: string,
+    setupChild: (child: Element) => Element = (c) => c,
+    id?: string
+  ): Element {
     const child = new Element(this.getDOMElement(), tagName, id);
     const updatedChild = setupChild(child);
 
@@ -114,36 +147,27 @@ export default class Element {
   }
 
   public render(): Element {
+    const container = this._container;
     this.children().render();
 
-    if (!this._appended) {
-      this._parent.appendChild(this._element);
-      this._appended = true;
+    if (!container.get(Keys.appended)) {
+      const parent = this.getParentDOMElement();
+      const element = this.getDOMElement();
+
+      parent.appendChild(element);
+
+      container.set(Keys.appended, true);
     }
 
     return this;
   }
 
-  public dispose(): void {
-    this.children().dispose();
-    this.attributes().dispose();
-    this.events().dispose();
-    this.classes().dispose();
-    this.styles().dispose();
-    
-    this._id = undefined;
-    this._tagName = undefined;
-    this._text = undefined;
-    this._attributes = undefined;
-    this._events = undefined;
-    this._cssClasses = undefined;
-    this._styles = undefined;
-    this._children = undefined;
-    this._appended = undefined;
+  public isDisposed(): boolean {
+    return this._container.isDisposed();
+  }
 
-    this.getParentDOMElement().removeChild(this.getDOMElement());
-    this._element = undefined;
-    this._parent = undefined;
+  public dispose(): void {
+    this._container.dispose();
   }
 
   public static create(
@@ -159,11 +183,22 @@ export type ElementMap = {
   [id: string]: Element;
 };
 
-export class Elements {
-  private _elements: ElementMap;
+const ElementsKeys = {
+  elements: 'elements',
+};
+
+export class Elements implements Disposable {
+  private _container: DisposableContainer;
 
   private constructor() {
-    this._elements = {};
+    this._container = DisposableContainer.create(
+      {
+        elements: {},
+      },
+      () => {
+        this.forEach((element) => element.dispose());
+      }
+    );
   }
 
   public setIn(id: string, element: Element): Elements {
@@ -171,13 +206,16 @@ export class Elements {
       return this;
     }
 
-    this._elements[id] = element;
+    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
+
+    elementMap[id] = element;
 
     return this;
   }
 
   public has(id: string): boolean {
-    return this._elements[id] !== undefined;
+    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
+    return elementMap[id] !== undefined;
   }
 
   public remove(id: string): Elements {
@@ -185,19 +223,22 @@ export class Elements {
       return this;
     }
 
-    this._elements[id].dispose();
+    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
+    elementMap[id].dispose();
 
-    delete this._elements[id];
+    delete elementMap[id];
 
     return this;
   }
 
   public getIn(id: string): Element | undefined {
-    return this._elements[id];
+    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
+    return elementMap[id];
   }
 
   public forEach(callback: (element: Element) => void): void {
-    Object.values(this._elements).forEach(callback);
+    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
+    Object.values(elementMap).forEach(callback);
   }
 
   public render(): Elements {
@@ -205,9 +246,12 @@ export class Elements {
     return this;
   }
 
+  public isDisposed(): boolean {
+    return this._container.isDisposed();
+  }
+
   public dispose(): void {
-    this.forEach((element) => element.dispose());
-    this._elements = undefined;
+    this._container.dispose();
   }
 
   public static create(): Elements {
