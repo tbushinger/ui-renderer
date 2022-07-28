@@ -3,7 +3,7 @@ import { Disposable, DisposableContainer } from '../utils/disposable';
 
 const Keys = {
   element: 'element',
-  attributeMap: 'attributesMap',
+  attributeMap: 'attributeMap',
 };
 
 export type AttributeMap = {

@@ -15,7 +15,6 @@ export default class Attribute implements Disposable {
       {
         element,
         key,
-        value,
       },
       (c) => {
         const elem: HTMLElement = c.get(Keys.element);
@@ -24,6 +23,8 @@ export default class Attribute implements Disposable {
         elem.removeAttribute(key);
       }
     );
+
+    this.set(value);
   }
 
   public get(): any {

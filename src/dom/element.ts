@@ -171,11 +171,11 @@ export default class Element implements Disposable {
   }
 
   public static create(
-    element: HTMLElement,
+    parentOrId: HTMLElement | string,
     tagName: string,
-    value: any
+    optionalId?: string
   ): Element {
-    return new Element(element, tagName, value);
+    return new Element(parentOrId, tagName, optionalId);
   }
 }
 

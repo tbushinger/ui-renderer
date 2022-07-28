@@ -15,7 +15,6 @@ export default class Style implements Disposable {
       {
         element,
         prop,
-        value,
       },
       (c) => {
         const elem: HTMLElement = c.get(Keys.element);
@@ -24,6 +23,8 @@ export default class Style implements Disposable {
         elem.style.removeProperty(prop);
       }
     );
+
+    this.set(value);
   }
 
   public get(): any {

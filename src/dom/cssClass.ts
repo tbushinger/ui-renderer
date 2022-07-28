@@ -13,7 +13,6 @@ export default class CssClass implements Disposable {
     this._container = DisposableContainer.create(
       {
         element,
-        name,
       },
       (c) => {
         const elem: HTMLElement = c.get(Keys.element);
@@ -22,6 +21,8 @@ export default class CssClass implements Disposable {
         elem.classList.remove(name);
       }
     );
+
+    this.set(name);
   }
 
   public get(): string {
