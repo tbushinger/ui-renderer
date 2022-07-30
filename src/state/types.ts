@@ -7,7 +7,7 @@ export type KVP = {
 
 export type EventState = {
   name: string;
-  handler: (...args: any) => any;
+  handler: EventListenerOrEventListenerObject;
 };
 
 export type EventsState = {
