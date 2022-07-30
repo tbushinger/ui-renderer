@@ -4,7 +4,7 @@ import Events from '../dom/events';
 import Style from '../dom/style';
 import Styles from '../dom/styles';
 import { diffArray, diffKVP, resolveValue } from './utils';
-import { Value, ValueScalar, EventState, KVP } from './types';
+import { Value, ValueScalar, EventState, KVP, EventsState } from './types';
 
 type StateVisitor = (context: any) => any;
 
@@ -21,52 +21,46 @@ const visitors: StateVisitors = {
     const { attributes, key, value } = context;
     const resolved: ValueScalar = resolveValue(value);
 
-    return attributes.setIn(key, resolved).getIn(key).get();
+    attributes.setIn(key, resolved);
+
+    return value;
   },
   cssClass: (context: { name: string; cssClasses: CssClasses }): string => {
     const { name, cssClasses } = context;
     const resolved = resolveValue(name) as string;
 
-    return cssClasses.setIn(resolved).getIn(resolved).get();
+    cssClasses.setIn(resolved);
+
+    return name;
   },
   event: (context: {
-    name: string;
-    handler: EventListenerOrEventListenerObject;
-    optionalId?: string;
-    events?: Events;
-  }): { id: string; eventState: EventState } => {
-    const { name, handler, optionalId, events } = context;
+    id: string;
+    state: EventState;
+    events: Events;
+  }): EventState => {
+    const { id, state, events } = context;
+    const { name, handler } = state;
     const resolved = resolveValue(name) as string;
-    const id = events.setIn(resolved, handler, optionalId);
+
+    events.setIn(resolved, handler, id);
 
     return {
-      id,
-      eventState: {
-        handler,
-        name: resolved,
-      },
+      handler,
+      name,
     };
   },
-  style: (context: {
-    prop: string;
-    value: Value;
-    isNew: boolean;
-    styles?: Styles;
-    style?: Style;
-  }): Value => {
-    const { prop, value, isNew, styles, style } = context;
+  style: (context: { prop: string; value: Value; styles: Styles }): Value => {
+    const { prop, value, styles } = context;
     const resolved = resolveValue(value);
 
-    if (isNew) {
-      return styles.setIn(prop, resolved).getIn(prop).get();
-    }
+    styles.setIn(prop, resolved);
 
-    return style.set(resolved).get();
+    return value;
   },
   attributes: (context: {
     prevState: KVP;
     newState: KVP;
-    attributes?: Attributes;
+    attributes: Attributes;
   }): KVP => {
     const { newState, prevState, attributes } = context;
 
@@ -101,8 +95,41 @@ const visitors: StateVisitors = {
       visitClass
     );
   },
-  // events
-  // styles
+  events: (context: {
+    prevState: KVP;
+    newState: KVP;
+    events: Events;
+  }): EventsState => {
+    const { newState, prevState, events } = context;
+
+    const visitEvent: any = (id: string, state: EventState): EventState => {
+      return visitors.event({ id, state, events });
+    };
+
+    return diffKVP(
+      prevState,
+      newState,
+      visitEvent,
+      (id) => events.remove(id),
+      visitEvent
+    ) as any;
+  },
+  styles: (context: { prevState: KVP; newState: KVP; styles: Styles }): KVP => {
+    const { newState, prevState, styles } = context;
+
+    const visitStyle = (prop: string, value: Value): Value => {
+      return visitors.style({ prop, value, styles });
+    };
+
+    return diffKVP(
+      prevState,
+      newState,
+      visitStyle,
+      (prop) => styles.remove(prop),
+      visitStyle
+    );
+  },
+
   // element
   // elements
 };
