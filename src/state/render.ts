@@ -66,123 +66,125 @@ const visitors: StateVisitors = {
     return value;
   },
   attributes: (context: {
-    prevState: KVP;
-    newState: KVP;
+    prevAttributesState: KVP;
+    newAttributesState: KVP;
     attributes: Attributes;
   }): KVP => {
-    const { newState, prevState, attributes } = context;
+    const { newAttributesState, prevAttributesState, attributes } = context;
 
-    const visitAttribute = (key: string, value: Value): Value => {
+    const updateAttribute = (key: string, value: Value): Value => {
       return visitors.attribute({ key, value, attributes });
     };
 
     return diffKVP(
-      prevState,
-      newState,
-      visitAttribute,
+      prevAttributesState,
+      newAttributesState,
+      updateAttribute,
       (key) => attributes.remove(key),
-      visitAttribute
+      updateAttribute
     );
   },
-  CssClasses: (context: {
-    prevState: Value[];
-    newState: Value[];
+  cssClasses: (context: {
+    prevClassesState: Value[];
+    newClassesState: Value[];
     cssClasses: CssClasses;
   }): Value[] => {
-    const { newState, prevState, cssClasses } = context;
+    const { newClassesState, prevClassesState, cssClasses } = context;
 
-    const visitClass = (name: Value): Value => {
+    const updateClass = (name: Value): Value => {
       return visitors.cssClass({ name, cssClasses });
     };
 
     return diffArray(
-      prevState,
-      newState,
-      visitClass,
+      prevClassesState,
+      newClassesState,
+      updateClass,
       (name: string) => cssClasses.remove(name),
-      visitClass
+      updateClass
     );
   },
   events: (context: {
-    prevState: KVP;
-    newState: KVP;
+    prevEventsState: KVP;
+    newEventsState: KVP;
     events: Events;
   }): EventsState => {
-    const { newState, prevState, events } = context;
+    const { newEventsState, prevEventsState, events } = context;
 
-    const visitEvent: any = (id: string, state: EventState): EventState => {
+    const updateEvent: any = (id: string, state: EventState): EventState => {
       return visitors.event({ id, state, events });
     };
 
     return diffKVP(
-      prevState,
-      newState,
-      visitEvent,
+      prevEventsState,
+      newEventsState,
+      updateEvent,
       (id) => events.remove(id),
-      visitEvent
+      updateEvent
     ) as any;
   },
-  styles: (context: { prevState: KVP; newState: KVP; styles: Styles }): KVP => {
-    const { newState, prevState, styles } = context;
+  styles: (context: {
+    prevStylesState: KVP;
+    newStylesState: KVP;
+    styles: Styles;
+  }): KVP => {
+    const { newStylesState, prevStylesState, styles } = context;
 
-    const visitStyle = (prop: string, value: Value): Value => {
+    const updateStyle = (prop: string, value: Value): Value => {
       return visitors.style({ prop, value, styles });
     };
 
     return diffKVP(
-      prevState,
-      newState,
-      visitStyle,
+      prevStylesState,
+      newStylesState,
+      updateStyle,
       (prop) => styles.remove(prop),
-      visitStyle
+      updateStyle
     );
   },
   element: (context: {
     isNew: boolean;
     parent: string | HTMLElement;
     id: string;
-    prevState: ElementState;
-    newState: ElementState;
+    prevElementState: ElementState;
+    newElementState: ElementState;
   }): ElementState => {
-    const { isNew, id, parent, prevState, newState } = context;
-    const { tagName, text } = newState;
-    const { element: prevElement } = prevState;
+    const { isNew, id, parent, prevElementState, newElementState } = context;
+    const { tagName, text } = newElementState;
+    const { element: prevElement } = prevElementState;
 
-    const element = isNew
-      ? Element.create(parent, tagName, id as string)
-      : prevElement;
+    const element = isNew ? Element.create(parent, tagName, id) : prevElement;
 
     const resolvedText = resolveValue(text) as string;
     element.setText(resolvedText);
 
     const attributes = visitors.attributes({
-      prevState: prevState.attributes,
-      newState: newState.attributes,
+      prevAttributesState: prevElementState.attributes,
+      newAttributesState: newElementState.attributes,
       attributes: element.attributes(),
     });
 
     const classes = visitors.cssClasses({
-      prevState: prevState.classes,
-      newState: newState.classes,
+      prevClassesState: prevElementState.classes,
+      newClassesState: newElementState.classes,
       cssClasses: element.classes(),
     });
 
     const events = visitors.events({
-      prevState: prevState.events,
-      newState: newState.events,
+      prevEventsState: prevElementState.events,
+      newEventsState: newElementState.events,
       events: element.events(),
     });
 
     const styles = visitors.styles({
-      prevState: prevState.styles,
-      newState: newState.styles,
-      Styles: element.events(),
+      prevStylesState: prevElementState.styles,
+      newStylesState: newElementState.styles,
+      styles: element.styles(),
     });
 
     const children = visitors.elements({
       parent: element,
-      prevState: prevState.children,
-      newState: newState.children,
+      prevElementsState: prevElementState.children,
+      newElementsState: newElementState.children,
       children: element.children(),
     });
 
@@ -202,11 +204,11 @@ const visitors: StateVisitors = {
   },
   elements: (context: {
     parent: string | HTMLElement;
-    prevState: KVP;
-    newState: KVP;
+    prevElementsState: KVP;
+    newElementsState: KVP;
     children: Elements;
   }): KVP => {
-    const { parent, newState, prevState, children } = context;
+    const { parent, newElementsState, prevElementsState, children } = context;
 
     const addElement = (
       id: string,
@@ -229,7 +231,7 @@ const visitors: StateVisitors = {
       id: string,
       newElementState: ElementState
     ): ElementState => {
-      const prevElementState: ElementState = (prevState as any)[id];
+      const prevElementState: ElementState = (prevElementsState as any)[id];
 
       return visitors.element({
         parent,
@@ -243,8 +245,8 @@ const visitors: StateVisitors = {
     const removeElement = (id: string) => children.remove(id);
 
     return diffKVP(
-      prevState,
-      newState,
+      prevElementsState,
+      newElementsState,
       addElement as any,
       removeElement,
       updateElement as any
@@ -253,40 +255,46 @@ const visitors: StateVisitors = {
 };
 
 export default class RenderEngine implements Disposable {
-  private _state: ElementState;
+  private _elementState: ElementState;
   private _rootId: string;
 
-  private constructor(rootId: string, initialState: ElementState) {
+  private constructor(rootId: string, initialElementState: ElementState) {
     this._rootId = rootId;
-    this._state = visitors.element({
+    this._elementState = visitors.element({
       isNew: true,
       parent: rootId,
-      id: initialState.id,
-      prevState: {},
-      newState: initialState
+      id: initialElementState.id,
+      prevElementState: {},
+      newElementState: initialElementState,
     });
   }
 
-  public update(optionalState?: ElementState): ElementState {
-    const newState = optionalState || this._state;
-    this._state = visitors.element({
-      newState,
+  public update(optionalElementState?: ElementState): ElementState {
+    const newElementState = optionalElementState || this._elementState;
+    this._elementState = visitors.element({
+      newElementState,
       isNew: false,
       parent: this._rootId,
-      id: newState.id,
-      prevState: this._state, 
+      id: newElementState.id,
+      prevElementState: this._elementState,
     });
 
-    return this._state;
+    return this._elementState;
   }
 
   public isDisposed(): boolean {
-    return this._state.element.isDisposed();
+    return this._elementState.element.isDisposed();
   }
 
   public dispose(): void {
-    this._state.element.dispose();
-    this._state = undefined;
+    this._elementState.element.dispose();
+    this._elementState = undefined;
   }
 
+  public static create(
+    rootId: string,
+    initialState: ElementState
+  ): RenderEngine {
+    return new RenderEngine(rootId, initialState);
+  }
 }

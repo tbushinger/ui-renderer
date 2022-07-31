@@ -20,13 +20,13 @@ export type Elements = {
 };
 
 export type ElementState = {
+  id: string;
   tagName: string;
-  attributes: KVP;
-  classes: string[];
-  events: ElementState;
-  styles: KVP;
-  children: Elements;
-  id?: string;
+  attributes?: KVP;
+  classes?: string[];
+  events?: EventsState;
+  styles?: KVP;
+  children?: Elements;
   text?: string;
   element?: Element;
 };
