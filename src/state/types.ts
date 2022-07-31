@@ -1,3 +1,4 @@
+import Element from '../dom/element';
 export type ValueFn = () => ValueScalar;
 export type ValueScalar = string | number | Date | null | undefined;
 export type Value = ValueScalar | ValueFn;
@@ -27,4 +28,5 @@ export type ElementState = {
   children: Elements;
   id?: string;
   text?: string;
+  element?: Element;
 };
