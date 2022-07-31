@@ -1,10 +1,17 @@
 import Attributes from '../dom/attributes';
 import CssClasses from '../dom/cssClasses';
+import Element, { Elements } from '../dom/element';
 import Events from '../dom/events';
-import Style from '../dom/style';
 import Styles from '../dom/styles';
 import { diffArray, diffKVP, resolveValue } from './utils';
-import { Value, ValueScalar, EventState, KVP, EventsState } from './types';
+import {
+  Value,
+  ValueScalar,
+  EventState,
+  KVP,
+  EventsState,
+  ElementState,
+} from './types';
 
 type StateVisitor = (context: any) => any;
 
@@ -129,7 +136,34 @@ const visitors: StateVisitors = {
       visitStyle
     );
   },
+  element: (context: {
+    isNew: boolean;
+    parent: string | HTMLElement;
+    elementOrId: string | Element;
+    prevState: ElementState;
+    newState: ElementState;
+  }): ElementState => {
+    const { isNew, elementOrId, parent, prevState, newState } = context;
 
+    const element = isNew
+      ? Element.create(parent, newState.tagName, elementOrId as string)
+      : (elementOrId as Element);
+
+    /*
+    const elment = Element.create(parentOrId, 'div', undefined);
+root.setText('Root');
+root.attributes().setIn('title', 'Root element');
+root.styles().setIn('color', 'navy').setIn('backgroundColor', 'lightgrey');
+
+root.classes().setIn('container');
+
+const eventId = root.events().setIn('click', (e) => {
+  console.log('event id', eventId);
+  console.log('Click from root ID:', e.target.id);
+});
+*/
+  },
   // element
   // elements
+  // root
 };
