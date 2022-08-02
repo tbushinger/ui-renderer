@@ -182,7 +182,7 @@ const visitors: StateVisitors = {
     });
 
     const children = visitors.elements({
-      parent: element,
+      parent: element.getDOMElement(),
       prevElementsState: prevElementState.children,
       newElementsState: newElementState.children,
       children: element.children(),
@@ -216,10 +216,10 @@ const visitors: StateVisitors = {
     ): ElementState => {
       const createdState: ElementState = visitors.element({
         parent,
-        newState: newElementState,
-        elementOrId: id,
+        newElementState,
+        id,
         isNew: true,
-        prevState: {},
+        prevElementState: {},
       });
 
       children.setIn(createdState.id, createdState.element);
@@ -235,10 +235,9 @@ const visitors: StateVisitors = {
 
       return visitors.element({
         parent,
-        newState: newElementState,
-        elementOrId: prevElementState.element,
+        newElementState,
+        prevElementState,
         isNew: false,
-        prevState: prevElementState,
       });
     };
 
@@ -267,6 +266,10 @@ export default class RenderEngine implements Disposable {
       prevElementState: {},
       newElementState: initialElementState,
     });
+  }
+
+  public getState(): ElementState {
+    return this._elementState;
   }
 
   public update(optionalElementState?: ElementState): ElementState {

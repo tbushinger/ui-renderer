@@ -21,10 +21,59 @@ const meta: ElementState = {
       handler: () => console.log('Root Clicked'),
     },
   },
-  // children
+  children: {
+    parent: {
+      tagName: 'div',
+      text: 'parent',
+      attributes: {
+        title: 'Parent element',
+      },
+      styles: {
+        color: 'navy',
+        backgroundColor: 'lightgray',
+      },
+      classes: ['container'],
+      events: {
+        click_1: {
+          name: 'click',
+          handler: (e) => {
+            e.stopPropagation();
+            console.log('Parent Clicked');
+          },
+        },
+      },
+    },
+  },
 };
 
-const state = Renderer.create('app', meta);
+const renderer = Renderer.create('app', meta);
+let state = renderer.getState();
+
+/*
+state.children.child1 = {
+  tagName: 'div',
+  text: 'parent',
+  attributes: {
+    title: 'Parent element',
+  },
+  styles: {
+    color: 'navy',
+    backgroundColor: 'lightgray',
+  },
+  classes: ['container'],
+  events: {
+    click_1: {
+      name: 'click',
+      handler: (e) => {
+        e.stopPropagation();
+        console.log('Parent Clicked');
+      },
+    },
+  },
+};
+*/
+
+renderer.update();
 
 // functions/binding
 // events
