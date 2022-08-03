@@ -25,12 +25,13 @@ export default class ValueState<T> implements Disposable {
   }
 
   public value(): Scalar<T> {
-    return this._resolveValue();
+    return this._prevValue;
   }
 
   public next(callback: (value: Scalar<T>, empty: boolean) => void): void {
-    const value = this.value();
-    const changed = areEqual(value, this._prevValue);
+    const value = this._resolveValue();
+
+    const changed = !areEqual(value, this._prevValue);
     if (changed) {
       callback(value, isNil(value));
     }

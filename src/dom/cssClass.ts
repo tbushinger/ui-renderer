@@ -1,59 +1,59 @@
-import areEqual from '../utils/equal';
-import { Disposable, DisposableContainer } from '../utils/disposable';
+import { Disposable, disposeObject } from '../utils/disposable';
+import ValueState, { Scalar, Value } from './value-state';
 
-const Keys = {
-  element: 'element',
-  name: 'name',
+type Fields = {
+  element: HTMLElement;
+  state: ValueState<string>;
 };
 
+function removeClass(name: string, element: HTMLElement): void {
+  if (name && element.classList.contains(name)) {
+    element.classList.remove(name);
+  }
+}
+
 export default class CssClass implements Disposable {
-  private _container: DisposableContainer;
+  private _fields: Fields;
 
-  private constructor(element: HTMLElement, name: string) {
-    this._container = DisposableContainer.create(
-      {
-        element,
-      },
-      (c) => {
-        const elem: HTMLElement = c.get(Keys.element);
-        const name: string = c.get(Keys.name);
+  private constructor(element: HTMLElement, name: Value<string>) {
+    this._fields = {
+      element,
+      state: ValueState.create(name),
+    };
+  }
 
-        elem.classList.remove(name);
+  public state(): ValueState<string> {
+    return this._fields.state;
+  }
+
+  public render(): CssClass {
+    const state = this.state();
+
+    state.next((name: Scalar<string>, empty: boolean) => {
+      const element = this._fields.element;
+
+      if (empty) {
+        removeClass(state.value(), element);
+      } else {
+        element.classList.add(name);
       }
-    );
-
-    this.set(name);
-  }
-
-  public get(): string {
-    const name: string = this._container.get(Keys.name);
-    return name;
-  }
-
-  public set(name: string): CssClass {
-    const container = this._container;
-
-    if (areEqual(container.get(Keys.name), name)) {
-      return this;
-    }
-
-    container.set(Keys.name, name);
-
-    const elem: HTMLElement = container.get(Keys.element);
-    elem.classList.add(name);
+    });
 
     return this;
   }
 
   public isDisposed(): boolean {
-    return this._container.isDisposed();
+    return this._fields === undefined;
   }
 
   public dispose(): void {
-    this._container.dispose();
+    disposeObject(this._fields, () => {
+      removeClass(this.state().value(), this._fields.element);
+    });
+    this._fields = undefined;
   }
 
-  public static create(element: HTMLElement, name: string): CssClass {
+  public static create(element: HTMLElement, name: Value<string>): CssClass {
     return new CssClass(element, name);
   }
 }

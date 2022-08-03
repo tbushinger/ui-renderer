@@ -1,10 +1,10 @@
-import { Disposable, DisposableContainer } from '../utils/disposable';
+import { Disposable, disposeObject } from '../utils/disposable';
 import ValueState, { Scalar, Value } from './value-state';
 
-const Keys = {
-  element: 'element',
-  key: 'key',
-  state: 'state',
+type Fields = {
+  element: HTMLElement;
+  key: string;
+  state: ValueState<string>;
 };
 
 function removeAttribute(key: string, element: HTMLElement): void {
@@ -14,36 +14,26 @@ function removeAttribute(key: string, element: HTMLElement): void {
 }
 
 export default class Attribute implements Disposable {
-  private _container: DisposableContainer;
+  private _fields: Fields;
 
   private constructor(element: HTMLElement, key: string, value: Value<string>) {
-    this._container = DisposableContainer.create(
-      {
-        element,
-        key,
-      },
-      (c) => {
-        const elem: HTMLElement = c.get(Keys.element);
-        const key: string = c.get(Keys.key);
-
-        removeAttribute(key, elem);
-      }
-    );
-
-    this._container.set(Keys.state, ValueState.create(value));
+    this._fields = {
+      element,
+      key,
+      state: ValueState.create(value),
+    };
   }
 
   public state(): ValueState<string> {
-    return this._container.get(Keys.state) as ValueState<string>;
+    return this._fields.state;
   }
 
   public render(): Attribute {
-    const container = this._container;
     const state = this.state();
 
     state.next((value: Scalar<string>, empty: boolean) => {
-      const element: HTMLElement = container.get(Keys.element);
-      const key: string = container.get(Keys.key);
+      const element = this._fields.element;
+      const key = this._fields.key;
 
       if (empty) {
         removeAttribute(key, element);
@@ -56,17 +46,20 @@ export default class Attribute implements Disposable {
   }
 
   public isDisposed(): boolean {
-    return this._container.isDisposed();
+    return this._fields === undefined;
   }
 
   public dispose(): void {
-    this._container.dispose();
+    disposeObject(this._fields, () => {
+      removeAttribute(this._fields.key, this._fields.element);
+    });
+    this._fields = undefined;
   }
 
   public static create(
     element: HTMLElement,
     key: string,
-    value: any
+    value: Value<string>
   ): Attribute {
     return new Attribute(element, key, value);
   }
