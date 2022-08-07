@@ -1,62 +1,70 @@
-import areEqual from '../utils/equal';
-import { Disposable, DisposableContainer } from '../utils/disposable';
+import { Disposable, disposeObject } from '../utils/disposable';
+import ValueState, { Scalar, Value } from './value-state';
 
-const Keys = {
-  element: 'element',
-  prop: 'prop',
-  value: 'value',
+type Fields = {
+  element: HTMLElement;
+  property: string;
+  state: ValueState<any>;
 };
 
+function removeProperty(property: string, element: HTMLElement): void {
+  if (element.style[property]) {
+    element.style.removeProperty(property);
+  }
+}
+
 export default class Style implements Disposable {
-  private _container: DisposableContainer;
+  private _fields: Fields;
 
-  private constructor(element: HTMLElement, prop: string, value: any) {
-    this._container = DisposableContainer.create(
-      {
-        element,
-        prop,
-      },
-      (c) => {
-        const elem: HTMLElement = c.get(Keys.element);
-        const prop: string = c.get(Keys.prop);
+  private constructor(
+    element: HTMLElement,
+    property: string,
+    value: Value<any>
+  ) {
+    this._fields = {
+      element,
+      property,
+      state: ValueState.create(value),
+    };
+  }
 
-        elem.style.removeProperty(prop);
+  public state(): ValueState<any> {
+    return this._fields.state;
+  }
+
+  public render(): Style {
+    const state = this.state();
+
+    state.next((value: Scalar<any>, empty: boolean) => {
+      const element = this._fields.element;
+      const property = this._fields.property;
+
+      if (empty) {
+        removeProperty(property, element);
+      } else {
+        element.style[property] = value;
       }
-    );
-
-    this.set(value);
-  }
-
-  public get(): any {
-    const value = this._container.get(Keys.value);
-    return value;
-  }
-
-  public set(value: any): Style {
-    const container = this._container;
-    if (areEqual(container.get(Keys.value), value)) {
-      return this;
-    }
-
-    container.set(Keys.value, value);
-
-    const element: HTMLElement = container.get(Keys.element);
-    const prop: string = container.get(Keys.prop);
-
-    element.style[prop] = value;
+    });
 
     return this;
   }
 
   public isDisposed(): boolean {
-    return this._container.isDisposed();
+    return this._fields === undefined;
   }
 
   public dispose(): void {
-    this._container.dispose();
+    disposeObject(this._fields, () => {
+      removeProperty(this._fields.property, this._fields.element);
+    });
+    this._fields = undefined;
   }
 
-  public static create(element: HTMLElement, prop: string, value: any): Style {
-    return new Style(element, prop, value);
+  public static create(
+    element: HTMLElement,
+    property: string,
+    value: Value<any>
+  ): Style {
+    return new Style(element, property, value);
   }
 }

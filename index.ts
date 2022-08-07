@@ -2,30 +2,67 @@
 import './style.css';
 //import Renderer from './src/state/render';
 //import { ElementState } from './src/state/types';
-import CssClass from './src/dom/cssClass';
+//import Event from './src/dom/event';
+//import Style from './src/dom/style';
+//import Text from './src/dom/text';
+/*
+const root = document.getElementById('app');
+const model = {
+  text: 'text 1',
+};
+
+const text = Text.create(root, () => false, (() => model.text) as any);
+text.render();
+model.text = 'text 2';
+text.render();
+*/
+/*
+const root = document.getElementById('app');
+const model = {
+  display: 'none',
+};
+
+const style = Style.create(root, 'display', (() => model.display) as any);
+style.render();
+model.display = null;
+style.render();
+*/
+/*
+const root = document.getElementById('app');
+const event = Event.create(root, 'click', (e) => alert(e.target.id));
+
+setTimeout(() => {
+  event.dispose();
+}, 5000);
+*/
+
+import CssClasses from './src/dom/cssClasses';
 
 const root = document.getElementById('app');
 const model = {
   value: 'container',
 };
 
-const css = CssClass.create(root, (() => model.value) as any);
-css.render().render().render();
+const classes = CssClasses.create(root);
+const css = classes.add(() => model.value);
+css.render();
 model.value = null;
-css.render().render();
+css.render();
 
 /*
-import Attribte from './src/dom/attribute';
+import Attributes from './src/dom/attributes';
 
 const root = document.getElementById('app');
 const model = {
   value: 'Hello',
 };
 
-const attr = Attribte.create(root, 'title', () => model.value);
-attr.render().render().render();
-//model.value = null;
-//attr.render();
+const attrs = Attributes.create(root);
+const attr = attrs.add('title', () => model.value);
+attrs.add('id', 'my id');
+attrs.render();
+model.value = null;
+attr.render();
 */
 /*
 const meta: ElementState = {

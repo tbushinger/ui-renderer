@@ -1,81 +1,40 @@
 import Attribute from './attribute';
-import { Disposable, DisposableContainer } from '../utils/disposable';
+import { Disposable, disposeObject } from '../utils/disposable';
+import { Value } from './value-state';
 
-const Keys = {
-  element: 'element',
-  attributeMap: 'attributeMap',
-};
-
-export type AttributeMap = {
-  [key: string]: Attribute;
+type Fields = {
+  element: HTMLElement;
+  attributes: Attribute[];
 };
 
 export default class Attributes implements Disposable {
-  private _container: DisposableContainer;
+  private _fields: Fields;
 
   private constructor(element: HTMLElement) {
-    this._container = DisposableContainer.create(
-      {
-        element,
-        attributeMap: {},
-      },
-      () => {
-        this.forEach((attribute) => attribute.dispose());
-      }
-    );
+    this._fields = {
+      element,
+      attributes: [],
+    };
   }
 
-  public setIn(key: string, value: any): Attributes {
-    const container = this._container;
-    if (this.has(key)) {
-      this.getIn(key).set(value);
-      return this;
-    }
+  public add(key: string, value: Value<string>): Attribute {
+    const attribute = Attribute.create(this._fields.element, key, value);
+    this._fields.attributes.push(attribute);
+    return attribute;
+  }
 
-    const attributeMap: AttributeMap = container.get(Keys.attributeMap);
-    const element: HTMLElement = container.get(Keys.element);
-
-    attributeMap[key] = Attribute.create(element, key, value);
-
+  public render(): Attributes {
+    this._fields.attributes.forEach((attribute) => attribute.render());
     return this;
-  }
-
-  public has(key: string): boolean {
-    const attributeMap: AttributeMap = this._container.get(Keys.attributeMap);
-    return attributeMap[key] !== undefined;
-  }
-
-  public remove(key: string): Attributes {
-    if (!this.has(key)) {
-      return this;
-    }
-
-    const attributeMap: AttributeMap = this._container.get(Keys.attributeMap);
-    const attribute: Attribute = attributeMap[key];
-
-    attribute.dispose();
-
-    delete attributeMap[key];
-
-    return this;
-  }
-
-  public getIn(key: string): Attribute | undefined {
-    const attributeMap: AttributeMap = this._container.get(Keys.attributeMap);
-    return attributeMap[key];
-  }
-
-  public forEach(callback: (attribute: Attribute) => void): void {
-    const attributeMap: AttributeMap = this._container.get(Keys.attributeMap);
-    Object.values(attributeMap).forEach(callback);
   }
 
   public isDisposed(): boolean {
-    return this._container.isDisposed();
+    return this._fields === undefined;
   }
 
   public dispose(): void {
-    this._container.dispose();
+    disposeObject(this._fields);
+    this._fields = undefined;
   }
 
   public static create(element: HTMLElement): Attributes {

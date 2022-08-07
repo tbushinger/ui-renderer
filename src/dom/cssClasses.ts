@@ -1,80 +1,40 @@
 import CssClass from './cssClass';
-import { Disposable, DisposableContainer } from '../utils/disposable';
+import { Disposable, disposeObject } from '../utils/disposable';
+import { Value } from './value-state';
 
-const Keys = {
-  element: 'element',
-  cssClassMap: 'cssClassMap',
-};
-
-export type CssClassMap = {
-  [name: string]: CssClass;
+type Fields = {
+  element: HTMLElement;
+  cssClasses: CssClass[];
 };
 
 export default class CssClasses implements Disposable {
-  private _container: DisposableContainer;
+  private _fields: Fields;
 
   private constructor(element: HTMLElement) {
-    this._container = DisposableContainer.create(
-      {
-        element,
-        cssClassMap: {},
-      },
-      () => {
-        this.forEach((cssClass) => cssClass.dispose());
-      }
-    );
+    this._fields = {
+      element,
+      cssClasses: [],
+    };
   }
 
-  public setIn(name: string): CssClasses {
-    if (this.has(name)) {
-      return this;
-    }
+  public add(name: Value<string>): CssClass {
+    const cssClass = CssClass.create(this._fields.element, name);
+    this._fields.cssClasses.push(cssClass);
+    return cssClass;
+  }
 
-    const container = this._container;
-    const cssClassMap: CssClassMap = container.get(Keys.cssClassMap);
-    const element: HTMLElement = container.get(Keys.element);
-
-    cssClassMap[name] = CssClass.create(element, name);
-
+  public render(): CssClasses {
+    this._fields.cssClasses.forEach((cssClass) => cssClass.render());
     return this;
-  }
-
-  public has(name: string): boolean {
-    const cssClassMap: CssClassMap = this._container.get(Keys.cssClassMap);
-    return cssClassMap[name] !== undefined;
-  }
-
-  public remove(name: string): CssClasses {
-    if (!this.has(name)) {
-      return this;
-    }
-
-    const cssClassMap: CssClassMap = this._container.get(Keys.cssClassMap);
-    const cssClass: CssClass = cssClassMap[name];
-
-    cssClass.dispose();
-
-    delete cssClassMap[name];
-
-    return this;
-  }
-
-  public getIn(name: string): CssClass | undefined {
-    const cssClassMap: CssClassMap = this._container.get(Keys.cssClassMap);
-    return cssClassMap[name];
-  }
-
-  public forEach(callback: (cssClass: CssClass) => void): void {
-    const cssClassMap: CssClassMap = this._container.get(Keys.cssClassMap);
-    Object.values(cssClassMap).forEach(callback);
   }
 
   public isDisposed(): boolean {
-    return this._container.isDisposed();
+    return this._fields === undefined;
   }
 
   public dispose(): void {
-    this._container.dispose();
+    disposeObject(this._fields);
+    this._fields = undefined;
   }
 
   public static create(element: HTMLElement): CssClasses {

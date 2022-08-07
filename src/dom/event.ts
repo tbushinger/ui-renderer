@@ -1,67 +1,49 @@
-import { Disposable, DisposableContainer } from '../utils/disposable';
-import Id from '../utils/id';
+import { Disposable, disposeObject } from '../utils/disposable';
 
-const Keys = {
-  element: 'element',
-  id: 'id',
-  name: 'name',
-  handler: 'handler',
+type Fields = {
+  element: HTMLElement;
+  name: string;
+  handler: EventListenerOrEventListenerObject;
 };
 
-const createId = Id();
+function removeEvent(
+  name: string,
+  handler: EventListenerOrEventListenerObject,
+  element: HTMLElement
+): void {
+  element.removeEventListener(name, handler);
+}
 
 export default class Event implements Disposable {
-  private _container: DisposableContainer;
+  private _fields: Fields;
 
   private constructor(
     element: HTMLElement,
     name: string,
     handler: EventListenerOrEventListenerObject
   ) {
-    this._container = DisposableContainer.create(
-      {
-        element,
-        name,
-        handler,
-        id: createId(),
-      },
-      (c) => {
-        const elem: HTMLElement = c.get(Keys.element);
-        const name: string = c.get(Keys.name);
-        const _handler: EventListenerOrEventListenerObject = c.get(
-          Keys.handler
-        );
-
-        elem.removeEventListener(name, _handler);
-      }
-    );
+    this._fields = {
+      element,
+      name,
+      handler,
+    };
 
     element.addEventListener(name, handler);
   }
 
-  public getId(): string {
-    const id: string = this._container.get(Keys.id);
-    return id;
-  }
-
-  public getName(): string {
-    const name: string = this._container.get(Keys.name);
-    return name;
-  }
-
-  public getHandler(): EventListenerOrEventListenerObject {
-    const handler: EventListenerOrEventListenerObject = this._container.get(
-      Keys.handler
-    );
-    return handler;
-  }
-
   public isDisposed(): boolean {
-    return this._container.isDisposed();
+    return this._fields === undefined;
   }
 
   public dispose(): void {
-    this._container.dispose();
+    disposeObject(this._fields, () => {
+      removeEvent(
+        this._fields.name,
+        this._fields.handler,
+        this._fields.element
+      );
+    });
+    this._fields = undefined;
   }
 
   public static create(
