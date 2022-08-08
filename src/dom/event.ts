@@ -49,7 +49,7 @@ export default class Event implements Disposable {
   public static create(
     element: HTMLElement,
     name: string,
-    handler: any
+    handler: EventListenerOrEventListenerObject
   ): Event {
     return new Event(element, name, handler);
   }

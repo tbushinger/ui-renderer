@@ -33,7 +33,9 @@ export default class CssClasses implements Disposable {
   }
 
   public dispose(): void {
-    disposeObject(this._fields);
+    disposeObject(this._fields, () =>
+      this._fields.cssClasses.forEach((c) => c.dispose())
+    );
     this._fields = undefined;
   }
 

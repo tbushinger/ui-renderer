@@ -12,9 +12,7 @@ export function disposeObject(
   Object.keys(target).forEach((key) => {
     const value = target[key];
 
-    if (Array.isArray(value)) {
-      value.forEach((item) => disposeObject(item));
-    } else if (value.dispose) {
+    if (value.dispose) {
       value.dispose();
     }
 

@@ -33,7 +33,9 @@ export default class Attributes implements Disposable {
   }
 
   public dispose(): void {
-    disposeObject(this._fields);
+    disposeObject(this._fields, () =>
+      this._fields.attributes.forEach((a) => a.dispose())
+    );
     this._fields = undefined;
   }
 

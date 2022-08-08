@@ -2,7 +2,6 @@
 import './style.css';
 //import Renderer from './src/state/render';
 //import { ElementState } from './src/state/types';
-//import Event from './src/dom/event';
 //import Style from './src/dom/style';
 //import Text from './src/dom/text';
 /*
@@ -27,15 +26,19 @@ style.render();
 model.display = null;
 style.render();
 */
-/*
+
+import Events from './src/dom/events';
+
 const root = document.getElementById('app');
-const event = Event.create(root, 'click', (e) => alert(e.target.id));
+const events = Events.create(root);
+
+const event = events.add('click', (e: any) => alert(e.target.id));
 
 setTimeout(() => {
-  event.dispose();
+  events.dispose();
 }, 5000);
-*/
 
+/*
 import CssClasses from './src/dom/cssClasses';
 
 const root = document.getElementById('app');
@@ -48,6 +51,7 @@ const css = classes.add(() => model.value);
 css.render();
 model.value = null;
 css.render();
+*/
 
 /*
 import Attributes from './src/dom/attributes';
