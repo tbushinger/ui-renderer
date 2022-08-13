@@ -1,25 +1,22 @@
-import areEqual from '../utils/equal';
 import Attributes from './attributes';
 import CssClasses from './cssClasses';
-import { Disposable, DisposableContainer } from '../utils/disposable';
+import { Disposable, disposeObject } from '../utils/disposable';
 import Events from './events';
-import Id from '../utils/id';
 import Styles from './styles';
+import ElementText from './text';
+import { Value } from './value-state';
 
-const createId = Id();
-
-const Keys = {
-  parent: 'parent',
-  element: 'element',
-  tagName: 'tagName',
-  text: 'text',
-  id: 'id',
-  attributes: 'attributes',
-  events: 'events',
-  cssClasses: 'cssClasses',
-  styles: 'styles',
-  appended: 'appended',
-  children: 'children',
+type Fields = {
+  parent: HTMLElement;
+  element: HTMLElement;
+  tagName: string;
+  text: ElementText;
+  attributes: Attributes;
+  events: Events;
+  cssClasses: CssClasses;
+  styles: Styles;
+  appended: boolean;
+  children: Elements;
 };
 
 function getParent(parentId: string | HTMLElement): HTMLElement {
@@ -38,220 +35,137 @@ function getParent(parentId: string | HTMLElement): HTMLElement {
 }
 
 export default class Element implements Disposable {
-  private _container: DisposableContainer;
+  private _fields: Fields;
 
   private constructor(
     parentOrId: HTMLElement | string,
     tagName: string,
-    optionalId?: string
+    text?: Value<string>
   ) {
     const parent = getParent(parentOrId);
     const element = document.createElement(tagName);
-    const id = optionalId || createId();
 
-    this._container = DisposableContainer.create(
-      {
-        id,
+    this._fields = {
+      parent,
+      element,
+      tagName,
+      appended: false,
+      text: ElementText.create(
         element,
-        tagName,
-        parent,
-        attributes: Attributes.create(element),
-        events: Events.create(element),
-        cssClasses: CssClasses.create(element),
-        styles: Styles.create(element),
-        children: Elements.create(),
-      },
-      () => {
-        parent.removeChild(element);
-      }
-    );
-
-    this.attributes().setIn('id', id);
+        () => this._fields.children.size() > 0,
+        text
+      ),
+      attributes: Attributes.create(element),
+      events: Events.create(element),
+      cssClasses: CssClasses.create(element),
+      styles: Styles.create(element),
+      children: Elements.create(),
+    };
   }
 
-  public getParentDOMElement(): HTMLElement {
-    const parent: HTMLElement = this._container.get(Keys.parent);
-    return parent;
-  }
-
-  public getDOMElement(): HTMLElement {
-    const element: HTMLElement = this._container.get(Keys.element);
-    return element;
-  }
-
-  public getId(): string {
-    const id: string = this._container.get(Keys.id);
-    return id;
-  }
-
-  public getText(): string {
-    const text: string = this._container.get(Keys.text);
-    return text;
-  }
-
-  public getTagName(): string {
-    const tagName: string = this._container.get(Keys.tagName);
-    return tagName;
-  }
-
-  public setText(text: string): Element {
-    const container = this._container;
-    if (areEqual(container.get(Keys.text), text)) {
-      return this;
-    }
-
-    container.set(Keys.text, text);
-    const element: HTMLElement = this._container.get(Keys.element);
-
-    element.innerText = text;
-
-    return this;
+  public text(): ElementText {
+    return this._fields.text;
   }
 
   public attributes(): Attributes {
-    const attributes: Attributes = this._container.get(Keys.attributes);
-    return attributes;
+    return this._fields.attributes;
   }
 
   public events(): Events {
-    const events: Events = this._container.get(Keys.events);
-    return events;
+    return this._fields.events;
   }
 
   public classes(): CssClasses {
-    const cssClasses: CssClasses = this._container.get(Keys.cssClasses);
-    return cssClasses;
+    return this._fields.cssClasses;
   }
 
   public styles(): Styles {
-    const styles: Styles = this._container.get(Keys.styles);
-    return styles;
+    return this._fields.styles;
   }
 
   public children(): Elements {
-    const children: Elements = this._container.get(Keys.children);
-    return children;
+    return this._fields.children;
   }
 
-  public addChild(
-    tagName: string,
-    setupChild: (child: Element) => Element = (c) => c,
-    id?: string
-  ): Element {
-    const child = new Element(this.getDOMElement(), tagName, id);
-    const updatedChild = setupChild(child);
+  public addChild(tagName: string, text?: string): Element {
+    const child = new Element(this._fields.element, tagName, text);
 
-    this.children().setIn(updatedChild.getId(), child);
+    this.children().add(child);
 
-    return this;
+    return child;
   }
 
   public render(): Element {
-    const container = this._container;
+    this.attributes().render();
+    this.classes().render();
+    this.styles().render();
     this.children().render();
 
-    if (!container.get(Keys.appended)) {
-      const parent = this.getParentDOMElement();
-      const element = this.getDOMElement();
+    if (!this._fields.appended) {
+      const parent = this._fields.parent;
+      const element = this._fields.element;
 
       parent.appendChild(element);
 
-      container.set(Keys.appended, true);
+      this._fields.appended = true;
     }
 
     return this;
   }
 
   public isDisposed(): boolean {
-    return this._container.isDisposed();
+    return this._fields === undefined;
   }
 
   public dispose(): void {
-    this._container.dispose();
+    disposeObject(this._fields, () => {
+      this.events().dispose();
+      this.text().dispose();
+      this.attributes().dispose();
+      this.classes().dispose();
+      this.styles().dispose();
+      this.children().dispose();
+    });
+    this._fields = undefined;
   }
 
   public static create(
     parentOrId: HTMLElement | string,
     tagName: string,
-    optionalId?: string
+    text?: Value<string>
   ): Element {
-    return new Element(parentOrId, tagName, optionalId);
+    return new Element(parentOrId, tagName, text);
   }
 }
 
-export type ElementMap = {
-  [id: string]: Element;
-};
-
-const ElementsKeys = {
-  elements: 'elements',
-};
-
 export class Elements implements Disposable {
-  private _container: DisposableContainer;
+  private _elements: Element[];
 
   private constructor() {
-    this._container = DisposableContainer.create(
-      {
-        elements: {},
-      },
-      () => {
-        this.forEach((element) => element.dispose());
-      }
-    );
+    this._elements = [];
   }
 
-  public setIn(id: string, element: Element): Elements {
-    if (this.has(id)) {
-      return this;
-    }
-
-    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
-
-    elementMap[id] = element;
+  public add(element: Element): Elements {
+    this._elements.push(element);
 
     return this;
   }
 
-  public has(id: string): boolean {
-    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
-    return elementMap[id] !== undefined;
-  }
-
-  public remove(id: string): Elements {
-    if (!this.has(id)) {
-      return this;
-    }
-
-    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
-    elementMap[id].dispose();
-
-    delete elementMap[id];
-
-    return this;
-  }
-
-  public getIn(id: string): Element | undefined {
-    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
-    return elementMap[id];
-  }
-
-  public forEach(callback: (element: Element) => void): void {
-    const elementMap: ElementMap = this._container.get(ElementsKeys.elements);
-    Object.values(elementMap).forEach(callback);
+  public size(): number {
+    return this._elements.length;
   }
 
   public render(): Elements {
-    this.forEach((element) => element.render());
+    this._elements.forEach((element) => element.render());
     return this;
   }
 
   public isDisposed(): boolean {
-    return this._container.isDisposed();
+    return this._elements === undefined;
   }
 
   public dispose(): void {
-    this._container.dispose();
+    this._elements.forEach((element) => element.dispose());
   }
 
   public static create(): Elements {

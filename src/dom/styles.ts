@@ -1,81 +1,42 @@
-import { Disposable, DisposableContainer } from '../utils/disposable';
+import { Disposable, disposeObject } from '../utils/disposable';
 import Style from './style';
+import { Value } from './value-state';
 
-const Keys = {
-  element: 'element',
-  styleMap: 'styleMap',
-};
-
-export type StyleMap = {
-  [prop: string]: Style;
+type Fields = {
+  element: HTMLElement;
+  styles: Style[];
 };
 
 export default class Styles implements Disposable {
-  private _container: DisposableContainer;
+  private _fields: Fields;
 
   private constructor(element: HTMLElement) {
-    this._container = DisposableContainer.create(
-      {
-        element,
-        styleMap: {},
-      },
-      () => {
-        this.forEach((style) => style.dispose());
-      }
-    );
+    this._fields = {
+      element,
+      styles: [],
+    };
   }
 
-  public setIn(prop: string, value: any): Styles {
-    const container = this._container;
-    if (this.has(prop)) {
-      this.getIn(prop).set(value);
-      return this;
-    }
+  public add(key: string, value: Value<any>): Style {
+    const style = Style.create(this._fields.element, key, value);
+    this._fields.styles.push(style);
+    return style;
+  }
 
-    const styleMap: StyleMap = container.get(Keys.styleMap);
-    const element: HTMLElement = container.get(Keys.element);
-
-    styleMap[prop] = Style.create(element, prop, value);
-
+  public render(): Styles {
+    this._fields.styles.forEach((style) => style.render());
     return this;
-  }
-
-  public has(prop: string): boolean {
-    const styleMap: StyleMap = this._container.get(Keys.styleMap);
-    return styleMap[prop] !== undefined;
-  }
-
-  public remove(prop: string): Styles {
-    if (!this.has(prop)) {
-      return this;
-    }
-
-    const styleMap: StyleMap = this._container.get(Keys.styleMap);
-    const style: Style = styleMap[prop];
-
-    style.dispose();
-
-    delete styleMap[prop];
-
-    return this;
-  }
-
-  public getIn(prop: string): Style | undefined {
-    const styleMap: StyleMap = this._container.get(Keys.styleMap);
-    return styleMap[prop];
-  }
-
-  public forEach(callback: (style: Style) => void): void {
-    const styleMap: StyleMap = this._container.get(Keys.styleMap);
-    Object.values(styleMap).forEach(callback);
   }
 
   public isDisposed(): boolean {
-    return this._container.isDisposed();
+    return this._fields === undefined;
   }
 
   public dispose(): void {
-    this._container.dispose();
+    disposeObject(this._fields, () =>
+      this._fields.styles.forEach((s) => s.dispose())
+    );
+    this._fields = undefined;
   }
 
   public static create(element: HTMLElement): Styles {

@@ -7,7 +7,7 @@ type Fields = {
   state: ValueState<string>;
 };
 
-export default class Text implements Disposable {
+export default class ElementText implements Disposable {
   private _fields: Fields;
 
   private constructor(
@@ -26,7 +26,7 @@ export default class Text implements Disposable {
     return this._fields.state;
   }
 
-  public render(): Text {
+  public render(): ElementText {
     const state = this.state();
 
     state.next((value: Scalar<string>, empty: boolean) => {
@@ -58,7 +58,7 @@ export default class Text implements Disposable {
     element: HTMLElement,
     hasChildren: () => boolean,
     value: Value<string>
-  ): Text {
-    return new Text(element, hasChildren, value);
+  ): ElementText {
+    return new ElementText(element, hasChildren, value);
   }
 }
