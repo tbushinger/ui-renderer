@@ -30,7 +30,7 @@ const root = visitor.visit('app', {
           },
           events: [
             {
-              name: 'change',
+              name: 'input',
               handler: (e) => {
                 model.newTaskText = e.target.value;
                 root.render();
@@ -47,6 +47,9 @@ const root = visitor.visit('app', {
         {
           tagName: 'button',
           text: () => `Add: ${model.newTaskText}`,
+          attributes: {
+            disabled: () => (model.newTaskText === '') ? true : undefined
+          },
           events: [
             {
               name: 'click',

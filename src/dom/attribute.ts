@@ -38,7 +38,11 @@ export default class Attribute implements Disposable {
       if (empty) {
         removeAttribute(key, element);
       } else {
-        element.setAttribute(key, value);
+        if (key === 'value') {
+          (element as any).value = value;
+        } else {
+          element.setAttribute(key, value);
+        }
       }
     });
 
