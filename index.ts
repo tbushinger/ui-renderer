@@ -1,125 +1,29 @@
-// Import stylesheets
 import './style.css';
-//import Renderer from './src/state/render';
-//import { ElementState } from './src/state/types';
-//import Style from './src/dom/style';
-//import Text from './src/dom/text';
-/*
-const root = document.getElementById('app');
+import Element from './src/dom/element';
+
 const model = {
-  text: 'text 1',
+  text: 'hello',
 };
 
-const text = Text.create(root, () => false, (() => model.text) as any);
-text.render();
-model.text = 'text 2';
-text.render();
-*/
-/*
-const root = document.getElementById('app');
-const model = {
-  display: 'none',
-};
+const root = Element.create('app', 'div');
+root.attributes().add('id', 'myId');
+root.styles().add('color', 'navy');
+root.classes().add('container');
+root.events().add('click', (e) => console.log(e.target.id));
+const child = root.addChild('div', () => model.text);
+child.styles().add('margin', '10px');
+child.classes().add('container');
+child.attributes().add('id', 'mychild');
+child.events().add('click', (e) => {
+  e.stopPropagation();
+  console.log(e.target.id);
+});
 
-const style = Style.create(root, 'display', (() => model.display) as any);
-style.render();
-model.display = null;
-style.render();
-*/
+root.render();
 
-import Events from './src/dom/events';
+model.text = 'updated';
 
-const root = document.getElementById('app');
-const events = Events.create(root);
-
-const event = events.add('click', (e: any) => alert(e.target.id));
-
-setTimeout(() => {
-  events.dispose();
-}, 5000);
-
-/*
-import CssClasses from './src/dom/cssClasses';
-
-const root = document.getElementById('app');
-const model = {
-  value: 'container',
-};
-
-const classes = CssClasses.create(root);
-const css = classes.add(() => model.value);
-css.render();
-model.value = null;
-css.render();
-*/
-
-/*
-import Attributes from './src/dom/attributes';
-
-const root = document.getElementById('app');
-const model = {
-  value: 'Hello',
-};
-
-const attrs = Attributes.create(root);
-const attr = attrs.add('title', () => model.value);
-attrs.add('id', 'my id');
-attrs.render();
-model.value = null;
-attr.render();
-*/
-/*
-const meta: ElementState = {
-  id: 'root',
-  tagName: 'div',
-  text: 'root',
-  attributes: {
-    title: 'Root element',
-  },
-  styles: {
-    color: 'navy',
-    backgroundColor: 'lightgray',
-  },
-  classes: ['container'],
-  events: {
-    click_1: {
-      name: 'click',
-      handler: () => console.log('Root Clicked'),
-    },
-  },
-  children: {
-    parent: {
-      tagName: 'div',
-      text: 'parent',
-      attributes: {
-        title: 'Parent element',
-      },
-      styles: {
-        color: 'navy',
-        backgroundColor: 'lightgray',
-      },
-      classes: ['container'],
-      events: {
-        click_1: {
-          name: 'click',
-          handler: (e) => {
-            e.stopPropagation();
-            console.log('Parent Clicked');
-          },
-        },
-      },
-    },
-  },
-};
-
-const renderer = Renderer.create('app', meta);
-let state = renderer.getState();
-
-*/
-
-// functions/binding
-// events
-
+root.render();
 /*
 setTimeout(() => {
   root.dispose();

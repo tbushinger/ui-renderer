@@ -1,8 +1,8 @@
 import areEqual from '../utils/equal';
 import { Disposable } from '../utils/disposable';
-export type Epression<T> = () => Scalar<T>;
+export type Expression<T> = () => Scalar<T>;
 export type Scalar<T> = T | null | undefined;
-export type Value<T> = Epression<T> | Scalar<T>;
+export type Value<T> = Expression<T> | Scalar<T>;
 
 export function isNil(value: any): boolean {
   return value === undefined || value === null;
@@ -13,12 +13,12 @@ export function isFunction<T>(value: Value<T>): boolean {
 }
 
 export default class ValueState<T> implements Disposable {
-  private _resolveValue: Epression<T>;
+  private _resolveValue: Expression<T>;
   private _prevValue: Scalar<T>;
 
   private constructor(value: Value<T>) {
     if (isFunction(value)) {
-      this._resolveValue = value as Epression<T>;
+      this._resolveValue = value as Expression<T>;
     } else {
       this._resolveValue = () => value as Scalar<T>;
     }

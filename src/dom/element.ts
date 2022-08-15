@@ -87,7 +87,7 @@ export default class Element implements Disposable {
     return this._fields.children;
   }
 
-  public addChild(tagName: string, text?: string): Element {
+  public addChild(tagName: string, text?: Value<string>): Element {
     const child = new Element(this._fields.element, tagName, text);
 
     this.children().add(child);
@@ -96,6 +96,7 @@ export default class Element implements Disposable {
   }
 
   public render(): Element {
+    this.text().render();
     this.attributes().render();
     this.classes().render();
     this.styles().render();
@@ -118,14 +119,13 @@ export default class Element implements Disposable {
   }
 
   public dispose(): void {
-    disposeObject(this._fields, () => {
-      this.events().dispose();
-      this.text().dispose();
-      this.attributes().dispose();
-      this.classes().dispose();
-      this.styles().dispose();
-      this.children().dispose();
-    });
+    const element = this._fields.element;
+    const parent = this._fields.parent;
+
+    disposeObject(this._fields);
+
+    parent.removeChild(element);
+
     this._fields = undefined;
   }
 
