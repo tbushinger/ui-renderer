@@ -53,7 +53,7 @@ export class MetaVisitor {
     parentOrId: Element | HTMLElement | string,
     meta: ElementMeta,
     isRoot: boolean = false
-  ): void {
+  ): Element {
     const element = isRoot
       ? Element.create(
           parentOrId as HTMLElement | string,
@@ -67,6 +67,8 @@ export class MetaVisitor {
     this.events(element, meta.events);
     this.styles(element, meta.styles);
     this.children(element, meta.children);
+
+    return element;
   }
 
   private children(parent: Element, meta: ElementMeta[] = []): void {
@@ -76,8 +78,8 @@ export class MetaVisitor {
   public visit(
     parentOrId: Element | HTMLElement | string,
     meta: ElementMeta
-  ): void {
-    this.element(parentOrId, meta, true);
+  ): Element {
+    return this.element(parentOrId, meta, true);
   }
 
   public static create(): MetaVisitor {

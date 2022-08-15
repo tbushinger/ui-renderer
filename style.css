@@ -4,7 +4,23 @@ h2 {
 }
 
 .container {
-  padding: 10px;
+  width: 200px;
+  padding: 5px;
   border: 1px solid gray;
   border-radius: 10px;
+}
+
+.row {
+  text-align: right;
+  padding: 5px;
+  padding-right: 12px;
+}
+
+.row input {
+  width: 100%;
+  border-radius: 5px;
+}
+
+.row button {
+  border-radius: 5px;
 }
