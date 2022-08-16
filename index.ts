@@ -1,11 +1,39 @@
 import './style.css';
 import { MetaVisitor } from './src/meta/visitor';
+import Element from './src/dom/element';
 
 const visitor = MetaVisitor.create();
 
 const model = {
   newTaskText: '',
 };
+
+const viewModelFactory = (getRoot: () => Element, model: any): any => {
+  return {
+    get: (key: string) => {
+      return () => model[key];
+    },
+    set: (key: string) => {
+      return (e: EventListenerOrEventListenerObject) => {
+        model[key] = e.target.value;
+        getRoot().render();
+      };
+    },
+    noValue: (key: string) => {
+      return () =>
+        model[key] === '' || model[key] === undefined ? true : undefined;
+    },
+    addTask: () => {
+      return () => {
+        alert(model.newTaskText);
+        model.newTaskText = '';
+        root.render();
+      };
+    },
+  };
+};
+
+const mv = viewModelFactory(() => root, model);
 
 const root = visitor.visit('app', {
   tagName: 'div',
@@ -26,15 +54,12 @@ const root = visitor.visit('app', {
           attributes: {
             id: 'taskInput',
             placeholder: 'Enter Task',
-            value: () => model.newTaskText,
+            value: mv.get('newTaskText'),
           },
           events: [
             {
               name: 'input',
-              handler: (e) => {
-                model.newTaskText = e.target.value;
-                root.render();
-              },
+              handler: mv.set('newTaskText'),
             },
           ],
         },
@@ -46,18 +71,14 @@ const root = visitor.visit('app', {
       children: [
         {
           tagName: 'button',
-          text: () => `Add: ${model.newTaskText}`,
+          text: () => `Add: ${mv.get('newTaskText')()}`,
           attributes: {
-            disabled: () => (model.newTaskText === '') ? true : undefined
+            disabled: mv.noValue('newTaskText'),
           },
           events: [
             {
               name: 'click',
-              handler: () => {
-                alert(model.newTaskText);
-                model.newTaskText = '';
-                root.render();
-              },
+              handler: mv.addTask(),
             },
           ],
         },
