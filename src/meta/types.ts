@@ -6,7 +6,7 @@ export type KVP<T> = {
 
 export type EventMeta = {
   name: string;
-  handler: EventListenerOrEventListenerObject;
+  handler: EventListenerOrEventListenerObject | string;
 };
 
 export type ElementMeta = {

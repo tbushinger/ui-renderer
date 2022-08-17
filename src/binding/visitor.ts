@@ -5,88 +5,82 @@ import Events from '../dom/events';
 import Styles from '../dom/styles';
 import { Value } from '../dom/value-state';
 import { ElementMeta, EventMeta, KVP } from '../meta/types';
-
-
+import { Input, Output, Registry } from './types';
 
 export class BinderVisitor {
+  private registry: Registry = {};
 
+  private bind(value: Value<any>) {
+    if (typeof value !== 'string') {
+      return value;
+    }
 
-  private attribute(
-    attributes: Attributes,
-    key: string,
-    value: Value<any>
-  ): void {
-    attributes.add(key, value);
+    if (!value.startsWith('@')) {
+      return value;
+    }
+
+    const [_prefix, name, ...params] = value.split(/\s|@/);
+
+    const fn = this.registry[name];
+    if (!fn) {
+      throw new Error(`Annotation "${name}" not registered!`);
+    }
+
+    return fn(...params);
   }
 
-  private attributes(element: Element, meta: KVP<any> = {}): void {
-    const attributes = element.attributes();
-    Object.keys(meta).forEach((key) =>
-      this.attribute(attributes, key, meta[key])
-    );
+  private attributes(meta: KVP<any> = {}): KVP<any> {
+    return Object.keys(meta).reduce((acc, key) => {
+      acc[key] = this.bind(meta[key]);
+      return acc;
+    }, meta);
   }
 
-  private cssClass(classes: CssClasses, name: Value<string>): void {
-    classes.add(name);
+  private classes(meta: Value<string>[] = []): Value<string>[] {
+    return meta.map((name) => this.bind(name));
   }
 
-  private classes(element: Element, meta: Value<string>[] = []): void {
-    const classes = element.classes();
-    meta.forEach((name) => this.cssClass(classes, name));
+  private events(meta: EventMeta[] = []): EventMeta[] {
+    return meta.map((eventMeta) => {
+      return {
+        name: eventMeta.name,
+        handler: this.bind(eventMeta.handler),
+      };
+    });
   }
 
-  private event(events: Events, meta: EventMeta): void {
-    events.add(meta.name, meta.handler);
+  private styles(meta: KVP<any> = {}): KVP<any> {
+    return Object.keys(meta).reduce((acc, key) => {
+      acc[key] = this.bind(meta[key]);
+      return acc;
+    }, meta);
   }
 
-  private events(element: Element, meta: EventMeta[] = []): void {
-    const events = element.events();
-    meta.forEach((eventMeta) => this.event(events, eventMeta));
+  private element(meta: ElementMeta): ElementMeta {
+    return Object.assign({}, meta, {
+      text: this.bind(meta.text),
+      attributes: this.attributes(meta.attributes),
+      classes: this.classes(meta.classes),
+      events: this.events(meta.events),
+      styles: this.styles(meta.styles),
+      children: this.children(meta.children),
+    });
   }
 
-  private style(styles: Styles, key: string, value: Value<string>): void {
-    styles.add(key, value);
+  private children(meta: ElementMeta[] = []): ElementMeta[] {
+    return meta.map((elementMeta) => this.element(elementMeta));
   }
 
-  private styles(element: Element, meta: KVP<any> = {}): void {
-    const styles = element.styles();
-    Object.keys(meta).forEach((key) => this.style(styles, key, meta[key]));
+  public visit(meta: ElementMeta): ElementMeta {
+    return this.element(meta);
   }
 
-  private element(
-    parentOrId: Element | HTMLElement | string,
-    meta: ElementMeta,
-    isRoot: boolean = false
-  ): Element {
-    const element = isRoot
-      ? Element.create(
-          parentOrId as HTMLElement | string,
-          meta.tagName,
-          meta.text
-        )
-      : (parentOrId as Element).addChild(meta.tagName, meta.text);
-
-    this.attributes(element, meta.attributes);
-    this.classes(element, meta.classes);
-    this.events(element, meta.events);
-    this.styles(element, meta.styles);
-    this.children(element, meta.children);
-
-    return element;
+  public registerBinding(name: string, fn: Input | Output): BinderVisitor {
+    this.registry[name] = fn;
+    return this;
   }
 
-  private children(parent: Element, meta: ElementMeta[] = []): void {
-    meta.forEach((elementMeta) => this.element(parent, elementMeta));
-  }
-
-  public visit(
-    parentOrId: Element | HTMLElement | string,
-    meta: ElementMeta
-  ): Element {
-    return this.element(parentOrId, meta, true);
-  }
-
-  public static create(): MetaVisitor {
-    return new MetaVisitor();
+  public static create(): BinderVisitor {
+    return new BinderVisitor();
   }
 }

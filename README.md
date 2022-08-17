@@ -2,8 +2,7 @@
 
 [Edit on StackBlitz ⚡️](https://stackblitz.com/edit/typescript-4vudrr)
 
-binding
-
+context (reg by kvp)
 index
 list
-macros
+macros/templates
