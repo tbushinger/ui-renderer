@@ -80,6 +80,13 @@ export class BinderVisitor {
     return this;
   }
 
+  public registerBoundModel(target: any): BinderVisitor {
+    Object.keys(target).forEach((key) => {
+      this.registerBinding(key, target[key]);
+    });
+    return this;
+  }
+
   public static create(): BinderVisitor {
     return new BinderVisitor();
   }

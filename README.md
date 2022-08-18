@@ -2,7 +2,6 @@
 
 [Edit on StackBlitz ⚡️](https://stackblitz.com/edit/typescript-4vudrr)
 
-context (reg by kvp)
-index
+index.ts and top level object -- for render
 list
 macros/templates
