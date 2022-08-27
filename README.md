@@ -2,6 +2,6 @@
 
 [Edit on StackBlitz ⚡️](https://stackblitz.com/edit/typescript-4vudrr)
 
-index.ts and top level object -- for render
+example
 list
 macros/templates
