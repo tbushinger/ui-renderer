@@ -1,5 +1,5 @@
 import './style.css';
-import Application from "./src";
+import Application from './src';
 import { ElementMeta } from './src/meta/types';
 
 const meta: ElementMeta = {
@@ -51,7 +51,52 @@ const meta: ElementMeta = {
         },
       ],
     },
+    {
+      tagName: 'div',
+      classes: ['row'],
+      attributes: {
+        id: 'tasks',
+      },
+      children: [],
+    },
   ],
+};
+
+const taskTemplate = {
+  tagName: 'div',
+  styles: {
+    textAlign: 'left',
+  },
+  children: [
+    {
+      tagName: 'div',
+      text: '@get',
+      styles: {
+        textAlign: 'left',
+        display: 'inline-block',
+        width: '100px',
+      },
+    },
+    {
+      tagName: 'button',
+      text: 'Delete',
+      events: [
+        {
+          name: 'click',
+          handler: '@removeTask',
+        },
+      ],
+    },
+  ],
+};
+
+const taskModel = (text: string, task: Application) => {
+  return {
+    get: () => () => text,
+    removeTask: () => () => {
+      task.dispose();
+    },
+  };
 };
 
 const model = (render: () => void) => {
@@ -70,13 +115,17 @@ const model = (render: () => void) => {
     noValue: (key: string) => () =>
       model[key] === '' || model[key] === undefined ? true : undefined,
     addTask: () => () => {
-      alert(model.newTaskText);
+      const task = Application.create('tasks', taskTemplate);
+      task.registerModel(taskModel(model.newTaskText, task));
+      task.render();
+
       model.newTaskText = '';
+
       render();
     },
   };
 };
 
-const main = Application.create("app", meta);
+const main = Application.create('app', meta);
 
 main.registerModel(model(() => main.render())).render();
