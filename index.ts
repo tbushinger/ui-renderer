@@ -1,35 +1,6 @@
 import './style.css';
-import { MetaVisitor } from './src/meta/visitor';
-import { BinderVisitor } from './src/binding/visitor';
+import Application from "./src";
 import { ElementMeta } from './src/meta/types';
-
-const metaVisitor = MetaVisitor.create();
-const binder = BinderVisitor.create();
-
-const viewModel = (render: () => void) => {
-  const model = {
-    newTaskText: '',
-  };
-
-  return {
-    get: (key: string) => () => model[key],
-    set: (key: string) => {
-      return (e: EventListenerOrEventListenerObject) => {
-        model[key] = e.target.value;
-        render();
-      };
-    },
-    noValue: (key: string) => () =>
-      model[key] === '' || model[key] === undefined ? true : undefined,
-    addTask: () => () => {
-      alert(model.newTaskText);
-      model.newTaskText = '';
-      render();
-    },
-  };
-};
-
-binder.registerBoundModel(viewModel(() => root.render()));
 
 const meta: ElementMeta = {
   tagName: 'div',
@@ -83,7 +54,29 @@ const meta: ElementMeta = {
   ],
 };
 
-const bound = binder.visit(meta);
-const root = metaVisitor.visit('app', bound);
+const model = (render: () => void) => {
+  const model = {
+    newTaskText: '',
+  };
 
-root.render();
+  return {
+    get: (key: string) => () => model[key],
+    set: (key: string) => {
+      return (e: EventListenerOrEventListenerObject) => {
+        model[key] = e.target.value;
+        render();
+      };
+    },
+    noValue: (key: string) => () =>
+      model[key] === '' || model[key] === undefined ? true : undefined,
+    addTask: () => () => {
+      alert(model.newTaskText);
+      model.newTaskText = '';
+      render();
+    },
+  };
+};
+
+const main = Application.create("app", meta);
+
+main.registerModel(model(() => main.render())).render();

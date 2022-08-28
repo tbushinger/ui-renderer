@@ -14,7 +14,7 @@ type Fields = {
   dom?: Element;
 };
 
-export class Application implements Disposable {
+export default class Application implements Disposable {
   private _fields: Fields;
 
   private constructor(target: string | HTMLElement, meta: ElementMeta) {
