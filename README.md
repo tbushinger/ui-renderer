@@ -1,5 +1,5 @@
-# typescript-4vudrr
+# Dynamic UI Renderer
 
-[Edit on StackBlitz ⚡️](https://stackblitz.com/edit/typescript-4vudrr)
+The project demonstrates how to build an HTML rendering engine based a meta data structure.
 
-docs
+[View on StackBlitz ⚡️](https://stackblitz.com/edit/typescript-4vudrr)
